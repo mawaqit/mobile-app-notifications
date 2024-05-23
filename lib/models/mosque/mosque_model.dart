@@ -1,0 +1,32 @@
+abstract class Mosque {
+  String? uuid;
+  String? name;
+  String? label;
+  String? phone;
+  String? email;
+  String? site;
+  String? localisation;
+  double? longitude;
+  double? latitude;
+  String? image;
+  String? url;
+  String? paymentWebsite;
+  String? jumua;
+  String? jumua2;
+  bool? womenSpace;
+  bool? janazaPrayer;
+  bool? aidPrayer;
+  String? aidPrayerTime;
+  String? aidPrayerTime2;
+  bool? childrenCourses;
+  bool? adultCourses;
+  bool? ramadanMeal;
+  bool? handicapAccessibility;
+  bool? ablutions;
+  bool? parking;
+  bool? jumuaAsDuhr;
+  String? lastModifiedHeaderTimes;
+  String? lastModifiedHeaderInfo;
+  String? lastModifiedHeaderHijri;
+  String? countryCode;
+}
