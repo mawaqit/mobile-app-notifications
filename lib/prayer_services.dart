@@ -49,8 +49,6 @@ class PrayerService {
           var notificationData = await _getPrayerDataByIndex(mosque, index);
           var prayerName = _getPrayerName(index);
 
-          var testTime = DateTime.now().add(Duration(minutes: i)); // testing the notification 
-
           String indexStr = index.toString(),
               dayStr = time!.day.toString(),
               monthStr = time.month.toString();
@@ -61,7 +59,7 @@ class PrayerService {
             mosqueName: mosque.name,
             sound: obj.notificationSound,
             prayerName: prayerName,
-            time: testTime, // have to reset this after testing
+            time: time, 
             notificationBeforeAthan: notificationData!.notificationBeforeAthan!,
             alarmId: alarmId,
           );
