@@ -191,4 +191,10 @@ class ScheduleAdhan {
     await prefs.setStringList('alarmIds', newAlarmIds);
     print(newAlarmIds.toList());
   }
+
+  Future<void> initAlarmManager() async {
+    if (Platform.isAndroid) {
+      await AndroidAlarmManager.initialize();
+    }
+  }
 }
