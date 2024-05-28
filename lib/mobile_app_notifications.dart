@@ -193,8 +193,6 @@ class ScheduleAdhan {
   }
 
   Future<void> initAlarmManager() async {
-    if (Platform.isAndroid) {
-      await AndroidAlarmManager.initialize();
-    }
+    await AndroidAlarmManager.initialize();
   }
 }

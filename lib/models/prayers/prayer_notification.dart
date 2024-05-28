@@ -33,16 +33,8 @@ class PrayerNotification {
     }
   }
 
-  static Future<PrayerNotification> getPrayerNotificationFromDB(String prayerKey) async {
-    final db = await SharedPreferences.getInstance();
-    final prayerNotificationString = db.getString(prayerKey);
-    if (prayerNotificationString == null) {
-      return PrayerNotification.fromJson(<String, dynamic>{});
-    }
-    return PrayerNotification.fromJson(jsonDecode(prayerNotificationString));
-  }
-
-  static Future<bool> savePrayerNotificationToDB(PrayerNotification prayerNotification) async {
+  static Future<bool> savePrayerNotificationToDB(
+      PrayerNotification prayerNotification) async {
     final prayerKey = getDBPrayerKeyByPrayer(prayerNotification.prayer);
     final db = await SharedPreferences.getInstance();
     return db.setString(prayerKey, jsonEncode(prayerNotification.toJson()));
@@ -53,7 +45,8 @@ class PrayerNotification {
     return db.remove(prayerKey);
   }
 
-  PrayerNotification(this.prayer, this.mosqueUuid, this.notificationBeforeAthan, this.notificationSound);
+  PrayerNotification(this.prayer, this.mosqueUuid, this.notificationBeforeAthan,
+      this.notificationSound);
 
   PrayerNotification.fromJson(Map<String, dynamic> json)
       : prayer = json['prayer'],
@@ -68,5 +61,17 @@ class PrayerNotification {
       'notificationBeforeAthan': notificationBeforeAthan,
       'notificationSound': notificationSound
     };
+  }
+}
+
+class PrayerNotificationService {
+  Future<PrayerNotification> getPrayerNotificationFromDB(
+      String prayerKey) async {
+    final db = await SharedPreferences.getInstance();
+    final prayerNotificationString = db.getString(prayerKey);
+    if (prayerNotificationString == null) {
+      return PrayerNotification.fromJson(<String, dynamic>{});
+    }
+    return PrayerNotification.fromJson(jsonDecode(prayerNotificationString));
   }
 }

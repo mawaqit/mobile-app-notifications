@@ -240,7 +240,7 @@ class PrayersName {
     }
   }
 
-  static Future<String> getLanguage() async {
+   Future<String> getLanguage() async {
     final db = await SharedPreferences.getInstance();
     return db.getString('MAWAQIT_LANGUAGE') ?? '';
   }

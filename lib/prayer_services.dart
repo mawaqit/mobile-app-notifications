@@ -22,7 +22,7 @@ class PrayerService {
 
     var scheduledCount = 0;
     for (var key in prayerKeys) {
-      var obj = await PrayerNotification.getPrayerNotificationFromDB(key);
+      var obj = await PrayerNotificationService().getPrayerNotificationFromDB(key);
       // if (obj != null && obj.mosqueUuid != null) {
       if (obj.mosqueUuid != null) {
         scheduledCount++;
@@ -37,16 +37,16 @@ class PrayerService {
     while (prayersList.length < 10) {
       i++;
       for (var key in prayerKeys) {
-        var obj = await PrayerNotification.getPrayerNotificationFromDB(key);
+        var obj = await PrayerNotificationService().getPrayerNotificationFromDB(key);
         var index = prayerKeys.indexOf(key);
 
         // if (obj != null && obj.mosqueUuid != null) {
         if (obj.mosqueUuid != null) {
           final mosque = await getMosque(obj.mosqueUuid!);
 
-          var time = _getPrayerTime(mosque, key,
+          var time = getPrayerTime(mosque, key,
               time: DateTime.now().add(Duration(days: i)));
-          var notificationData = await _getPrayerDataByIndex(mosque, index);
+          var notificationData = await getPrayerDataByIndex(mosque, index);
           var prayerName = _getPrayerName(index);
 
           String indexStr = index.toString(),
@@ -59,7 +59,7 @@ class PrayerService {
             mosqueName: mosque.name,
             sound: obj.notificationSound,
             prayerName: prayerName,
-            time: time, 
+            time: time,
             notificationBeforeAthan: notificationData!.notificationBeforeAthan!,
             alarmId: alarmId,
           );
@@ -75,11 +75,11 @@ class PrayerService {
     return prayersList;
   }
 
-  Future<PrayerNotification?> _getPrayerDataByIndex(
+  Future<PrayerNotification?> getPrayerDataByIndex(
       DetailedMosque? mosque, int index) async {
     final nextPrayerKey = prayerKeys[index];
     final notificationData =
-        await PrayerNotification.getPrayerNotificationFromDB(nextPrayerKey);
+        await PrayerNotificationService().getPrayerNotificationFromDB(nextPrayerKey);
     if (notificationData.notificationSound != 'SILENT') {
       return notificationData;
     } else {
@@ -105,7 +105,7 @@ class PrayerService {
     }
   }
 
-  DateTime? _getPrayerTime(DetailedMosque mosque, String key,
+  DateTime? getPrayerTime(DetailedMosque mosque, String key,
       {DateTime? time}) {
     var now = time ?? DateTime.now();
 
@@ -132,7 +132,7 @@ class PrayerService {
     return null;
   }
 
-   Future<DetailedMosque> getMosque(String uuid) async {
+  Future<DetailedMosque> getMosque(String uuid) async {
     final db = await SharedPreferences.getInstance();
     final data = db.getString(uuid) ?? jsonEncode({});
     final Map<String, dynamic> mosqueJson = jsonDecode(data);
