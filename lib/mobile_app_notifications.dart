@@ -202,6 +202,10 @@ class ScheduleAdhan {
             prayer.mosqueName,
             prayer.sound,
           );
+          print(
+              'Pre Notification scheduled for ${prayer.prayerName} at : ${prayer.time!.subtract(
+            Duration(minutes: prayer.notificationBeforeAthan),
+          )} Id: ${1 + prayer.alarmId}');
         }
         String prayerTime = DateFormat('HH:mm').format(prayer.time!);
         scheduleIOS(
@@ -210,6 +214,8 @@ class ScheduleAdhan {
             '$translatedPrayerName $prayerTime',
             prayer.mosqueName,
             prayer.sound);
+        print(
+            'Notification scheduled for ${prayer.prayerName} at : ${prayer.time} Id: ${prayer.alarmId}');
       }
     }
 
@@ -239,9 +245,8 @@ class ScheduleAdhan {
     DateTime date,
     String? title,
     String? body,
-    String? soundId, {
-    bool? force,
-  }) async {
+    String? soundId,
+  ) async {
     final iOSPlatformChannelSpecifics = DarwinNotificationDetails(
       sound: soundId,
       presentSound: true,
