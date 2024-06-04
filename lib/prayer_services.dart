@@ -1,6 +1,7 @@
 // prayer_service.dart
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'models/mosque/detailed_mosque.dart';
@@ -19,11 +20,12 @@ class PrayerService {
 
   Future<List<NotificationInfoModel>> getPrayers() async {
     List<NotificationInfoModel> prayersList = [];
+    List<int> preNotificationList = [];
 
     var scheduledCount = 0;
     for (var key in prayerKeys) {
-      var obj = await PrayerNotificationService().getPrayerNotificationFromDB(key);
-      // if (obj != null && obj.mosqueUuid != null) {
+      var obj =
+          await PrayerNotificationService().getPrayerNotificationFromDB(key);
       if (obj.mosqueUuid != null) {
         scheduledCount++;
       }
@@ -34,13 +36,12 @@ class PrayerService {
     }
 
     int i = -1;
-    while (prayersList.length < 10) {
+    while (prayersList.length < (Platform.isIOS ? 70 : 10)) {
       i++;
       for (var key in prayerKeys) {
-        var obj = await PrayerNotificationService().getPrayerNotificationFromDB(key);
+        var obj =
+            await PrayerNotificationService().getPrayerNotificationFromDB(key);
         var index = prayerKeys.indexOf(key);
-
-        // if (obj != null && obj.mosqueUuid != null) {
         if (obj.mosqueUuid != null) {
           final mosque = await getMosque(obj.mosqueUuid!);
 
@@ -55,31 +56,38 @@ class PrayerService {
           String str = indexStr + dayStr + monthStr;
           int alarmId = int.parse(str);
           print('Alarm ID: $alarmId');
+
+          //testing time 
+          var testTime = DateTime.now().add(Duration(minutes: i));
           NotificationInfoModel prayer = NotificationInfoModel(
             mosqueName: mosque.name,
             sound: obj.notificationSound,
             prayerName: prayerName,
-            time: time,
+            time: testTime,
             notificationBeforeAthan: notificationData!.notificationBeforeAthan!,
             alarmId: alarmId,
           );
 
           prayersList.add(prayer);
+          if (notificationData.notificationBeforeAthan != 0) {
+            preNotificationList.add(1);
+          }
         }
       }
     }
     prayersList.removeWhere((element) {
       return element.time!.isBefore(DateTime.now());
     });
-    prayersList = prayersList.sublist(0, 5);
+    prayersList = prayersList.sublist(
+        0, Platform.isIOS ? (63 - preNotificationList.length) : 5);
     return prayersList;
   }
 
   Future<PrayerNotification?> getPrayerDataByIndex(
       DetailedMosque? mosque, int index) async {
     final nextPrayerKey = prayerKeys[index];
-    final notificationData =
-        await PrayerNotificationService().getPrayerNotificationFromDB(nextPrayerKey);
+    final notificationData = await PrayerNotificationService()
+        .getPrayerNotificationFromDB(nextPrayerKey);
     if (notificationData.notificationSound != 'SILENT') {
       return notificationData;
     } else {
@@ -105,8 +113,7 @@ class PrayerService {
     }
   }
 
-  DateTime? getPrayerTime(DetailedMosque mosque, String key,
-      {DateTime? time}) {
+  DateTime? getPrayerTime(DetailedMosque mosque, String key, {DateTime? time}) {
     var now = time ?? DateTime.now();
 
     var calendar = mosque.calendar;

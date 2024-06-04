@@ -1,6 +1,6 @@
 name: mobile_app_notifications
 description: "A new Flutter project."
-version: 0.0.3
+version: 0.0.4
 homepage:
 
 environment:
@@ -15,6 +15,9 @@ dependencies:
   intl:
   shared_preferences: ^2.2.1
   json_annotation: ^4.5.0
+  flutter_local_notifications: ^17.1.2
+  flutter_timezone: ^1.0.8
+  timezone: ^0.9.3
 
 dev_dependencies:
   flutter_test:

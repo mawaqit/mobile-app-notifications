@@ -5,10 +5,14 @@ import 'dart:io';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_app_notifications/models/prayers/prayer_name.dart';
 import 'package:mobile_app_notifications/prayer_services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timezone/data/latest_all.dart' as tzl;
+import 'package:timezone/timezone.dart' as tz;
 
 @pragma('vm:entry-point')
 void ringAlarm(int id, Map<String, dynamic> data) async {
@@ -125,10 +129,10 @@ class ScheduleAdhan {
       var prayer = prayersList[i];
       int index = getPrayerIndex(prayer.prayerName!);
 
-      //for Pre notification
+      String translatedPrayerName = await PrayersName().getPrayerName(index);
+      String minutesToAthan = await PrayersName().getStringText();
       if (Platform.isAndroid) {
-        String translatedPrayerName = await PrayersName().getPrayerName(index);
-        String minutesToAthan = await PrayersName().getStringText();
+        //for Pre notification
         if (prayer.notificationBeforeAthan != 0) {
           newAlarmIds.add((1 + prayer.alarmId).toString());
           try {
@@ -186,6 +190,27 @@ class ScheduleAdhan {
         print(
             'Notification scheduled for ${prayer.prayerName} at : ${prayer.time} Id: ${prayer.alarmId}');
       }
+      if (Platform.isIOS) {
+        if (prayer.notificationBeforeAthan != 0) {
+          String title =
+              '${prayer.notificationBeforeAthan.toString()} $minutesToAthan $translatedPrayerName';
+          scheduleIOS(
+            1 + prayer.alarmId,
+            prayer.time!
+                .subtract(Duration(minutes: prayer.notificationBeforeAthan)),
+            title,
+            prayer.mosqueName,
+            prayer.sound,
+          );
+        }
+        String prayerTime = DateFormat('HH:mm').format(prayer.time!);
+        scheduleIOS(
+            prayer.alarmId,
+            prayer.time!,
+            '$translatedPrayerName $prayerTime',
+            prayer.mosqueName,
+            prayer.sound);
+      }
     }
 
     await prefs.setStringList('alarmIds', newAlarmIds);
@@ -194,5 +219,58 @@ class ScheduleAdhan {
 
   Future<void> initAlarmManager() async {
     await AndroidAlarmManager.initialize();
+  }
+
+  var flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  Future<void> init() async {
+    const initializationSettingsIOS = DarwinInitializationSettings(
+      requestSoundPermission: true,
+      requestBadgePermission: true,
+      requestAlertPermission: true,
+    );
+    const initializationSettings = InitializationSettings(
+      iOS: initializationSettingsIOS,
+    );
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  }
+
+  Future<void> scheduleIOS(
+    int? id,
+    DateTime date,
+    String? title,
+    String? body,
+    String? soundId, {
+    bool? force,
+  }) async {
+    final iOSPlatformChannelSpecifics = DarwinNotificationDetails(
+      sound: soundId,
+      presentSound: true,
+      presentAlert: true,
+      presentBadge: true,
+    );
+
+    final platformChannelSpecifics = NotificationDetails(
+      iOS: iOSPlatformChannelSpecifics,
+    );
+
+    tzl.initializeTimeZones();
+    final timeZoneName = await FlutterTimezone.getLocalTimezone();
+    final location = tz.getLocation(timeZoneName);
+    tz.setLocalLocation(tz.getLocation(timeZoneName));
+    final scheduledDate = tz.TZDateTime.from(date, location);
+
+    tz.TZDateTime now = tz.TZDateTime.now(location);
+    if (now.isAfter(scheduledDate)) return;
+
+    await flutterLocalNotificationsPlugin.zonedSchedule(
+      id!,
+      title,
+      body,
+      scheduledDate,
+      platformChannelSpecifics,
+      androidScheduleMode: AndroidScheduleMode.alarmClock,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.wallClockTime,
+    );
   }
 }
