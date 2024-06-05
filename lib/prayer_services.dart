@@ -55,13 +55,11 @@ class PrayerService {
           int alarmId = int.parse(str);
           print('Alarm ID: $alarmId');
 
-          //testing time 
-          var testTime = DateTime.now().add(Duration(minutes: i));
           NotificationInfoModel prayer = NotificationInfoModel(
             mosqueName: mosque.name,
             sound: obj.notificationSound,
             prayerName: prayerName,
-            time: testTime,
+            time: time,
             notificationBeforeAthan: notificationData!.notificationBeforeAthan!,
             alarmId: alarmId,
           );

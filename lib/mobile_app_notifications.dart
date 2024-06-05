@@ -112,7 +112,16 @@ class ScheduleAdhan {
     'MAGRIB_NOTIFICATION',
     'ISHAA_NOTIFICATION',
   ];
-  schedule() async {
+
+  schedule() {
+    if (Platform.isAndroid) {
+      scheduleAndroid();
+    } else if (Platform.isIOS) {
+      scheduleIOS();
+    }
+  }
+
+  scheduleAndroid() async {
     print('from schedule');
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
@@ -191,8 +200,6 @@ class ScheduleAdhan {
         }
         print(
             'Notification scheduled for ${prayer.prayerName} at : ${prayer.time} Id: ${prayer.alarmId}');
-      } else if (Platform.isIOS) {
-        scheduleIOS();
       }
     }
 
@@ -219,7 +226,7 @@ class ScheduleAdhan {
         String title =
             '${prayer.notificationBeforeAthan.toString()} $minutesToAthan $translatedPrayerName';
         iosNotificationSchedular(
-          1 + prayer.alarmId,
+          int.parse(("1${prayer.alarmId}")),
           prayer.time!
               .subtract(Duration(minutes: prayer.notificationBeforeAthan)),
           title,
@@ -250,6 +257,7 @@ class ScheduleAdhan {
   }
 
   var flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
   Future<void> init() async {
     const initializationSettingsIOS = DarwinInitializationSettings(
       requestSoundPermission: true,
@@ -300,6 +308,8 @@ class ScheduleAdhan {
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.wallClockTime,
       );
+
+
     } on Exception catch (e) {
       print('ERROR: $e');
     }
