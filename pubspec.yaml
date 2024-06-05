@@ -1,7 +1,7 @@
 name: mobile_app_notifications
 description: "A new Flutter project."
-version: 0.0.5
-homepage:
+version: 0.0.6
+homepage: https://github.com/mawaqit/mobile-app-notifications
 
 environment:
   sdk: '>=3.3.0 <4.0.0'

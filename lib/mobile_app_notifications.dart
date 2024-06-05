@@ -191,34 +191,9 @@ class ScheduleAdhan {
         }
         print(
             'Notification scheduled for ${prayer.prayerName} at : ${prayer.time} Id: ${prayer.alarmId}');
+      } else if (Platform.isIOS) {
+        scheduleIOS();
       }
-      // if (Platform.isIOS) {
-      //   if (prayer.notificationBeforeAthan != 0) {
-      //     String title =
-      //         '${prayer.notificationBeforeAthan.toString()} $minutesToAthan $translatedPrayerName';
-      //     iosNotificationSchedular(
-      //       1 + prayer.alarmId,
-      //       prayer.time!
-      //           .subtract(Duration(minutes: prayer.notificationBeforeAthan)),
-      //       title,
-      //       prayer.mosqueName,
-      //       prayer.sound,
-      //     );
-      //     print(
-      //         'Pre Notification scheduled for ${prayer.prayerName} at : ${prayer.time!.subtract(
-      //       Duration(minutes: prayer.notificationBeforeAthan),
-      //     )} Id: ${1 + prayer.alarmId}');
-      //   }
-      //   String prayerTime = DateFormat('HH:mm').format(prayer.time!);
-      //   iosNotificationSchedular(
-      //       prayer.alarmId,
-      //       prayer.time!,
-      //       '$translatedPrayerName $prayerTime',
-      //       prayer.mosqueName,
-      //       prayer.sound);
-      //   print(
-      //       'Notification scheduled for ${prayer.prayerName} at : ${prayer.time} Id: ${prayer.alarmId}');
-      // }
     }
 
     await prefs.setStringList('alarmIds', newAlarmIds);
@@ -226,11 +201,13 @@ class ScheduleAdhan {
   }
 
   scheduleIOS() async {
+    flutterLocalNotificationsPlugin.cancelAll();
+    print('Cleared previous Notificatoins');
+
     var prayersList = await PrayerService().getPrayers();
     int i = 0, j = 0;
 
     while (j < 63) {
-
       var prayer = prayersList[i];
       int index = getPrayerIndex(prayer.prayerName!);
 
@@ -239,36 +216,32 @@ class ScheduleAdhan {
 
       //for pre notification
       if (prayer.notificationBeforeAthan != 0) {
-          String title =
-              '${prayer.notificationBeforeAthan.toString()} $minutesToAthan $translatedPrayerName';
-          iosNotificationSchedular(
-            1 + prayer.alarmId,
-            prayer.time!
-                .subtract(Duration(minutes: prayer.notificationBeforeAthan)),
-            title,
-            prayer.mosqueName,
-            prayer.sound,
-          );
-          print(
-              'Pre Notification scheduled for ${prayer.prayerName} at : ${prayer.time!.subtract(
-            Duration(minutes: prayer.notificationBeforeAthan),
-          )} Id: ${1 + prayer.alarmId}');
-          
-          j++;
-        }
-        
-        //for Athan Notification
-         String prayerTime = DateFormat('HH:mm').format(prayer.time!);
+        String title =
+            '${prayer.notificationBeforeAthan.toString()} $minutesToAthan $translatedPrayerName';
         iosNotificationSchedular(
-            prayer.alarmId,
-            prayer.time!,
-            '$translatedPrayerName $prayerTime',
-            prayer.mosqueName,
-            prayer.sound);
+          1 + prayer.alarmId,
+          prayer.time!
+              .subtract(Duration(minutes: prayer.notificationBeforeAthan)),
+          title,
+          prayer.mosqueName,
+          null,
+        );
         print(
-            'Notification scheduled for ${prayer.prayerName} at : ${prayer.time} Id: ${prayer.alarmId}');
+            'Pre Notification scheduled for ${prayer.prayerName} at : ${prayer.time!.subtract(
+          Duration(minutes: prayer.notificationBeforeAthan),
+        )} Id: ${1 + prayer.alarmId}');
+
         j++;
-        i++;
+      }
+
+      //for Athan Notification
+      String prayerTime = DateFormat('HH:mm').format(prayer.time!);
+      iosNotificationSchedular(prayer.alarmId, prayer.time!,
+          '$translatedPrayerName $prayerTime', prayer.mosqueName, prayer.sound);
+      print(
+          'Notification scheduled for ${prayer.prayerName} at : ${prayer.time} Id: ${prayer.alarmId}');
+      j++;
+      i++;
     }
   }
 
@@ -289,7 +262,7 @@ class ScheduleAdhan {
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
- Future<void> iosNotificationSchedular(
+  Future<void> iosNotificationSchedular(
     int? id,
     DateTime date,
     String? title,
@@ -298,7 +271,7 @@ class ScheduleAdhan {
   ) async {
     try {
       final iOSPlatformChannelSpecifics = DarwinNotificationDetails(
-        sound: soundId,
+        sound: soundId == 'DEFAULT' ? null : soundId,
         presentSound: true,
         presentAlert: true,
         presentBadge: true,
