@@ -20,8 +20,6 @@ class PrayerService {
 
   Future<List<NotificationInfoModel>> getPrayers() async {
     List<NotificationInfoModel> prayersList = [];
-    List<int> preNotificationList = [];
-
     var scheduledCount = 0;
     for (var key in prayerKeys) {
       var obj =
@@ -69,9 +67,6 @@ class PrayerService {
           );
 
           prayersList.add(prayer);
-          if (notificationData.notificationBeforeAthan != 0) {
-            preNotificationList.add(1);
-          }
         }
       }
     }
@@ -79,7 +74,7 @@ class PrayerService {
       return element.time!.isBefore(DateTime.now());
     });
     prayersList = prayersList.sublist(
-        0, Platform.isIOS ? (63 - preNotificationList.length) : 5);
+        0, Platform.isIOS ? 63 : 5);
     return prayersList;
   }
 

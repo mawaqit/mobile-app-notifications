@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 library mobile_app_notifications;
 
 import 'dart:io';
@@ -190,11 +192,56 @@ class ScheduleAdhan {
         print(
             'Notification scheduled for ${prayer.prayerName} at : ${prayer.time} Id: ${prayer.alarmId}');
       }
-      if (Platform.isIOS) {
-        if (prayer.notificationBeforeAthan != 0) {
+      // if (Platform.isIOS) {
+      //   if (prayer.notificationBeforeAthan != 0) {
+      //     String title =
+      //         '${prayer.notificationBeforeAthan.toString()} $minutesToAthan $translatedPrayerName';
+      //     iosNotificationSchedular(
+      //       1 + prayer.alarmId,
+      //       prayer.time!
+      //           .subtract(Duration(minutes: prayer.notificationBeforeAthan)),
+      //       title,
+      //       prayer.mosqueName,
+      //       prayer.sound,
+      //     );
+      //     print(
+      //         'Pre Notification scheduled for ${prayer.prayerName} at : ${prayer.time!.subtract(
+      //       Duration(minutes: prayer.notificationBeforeAthan),
+      //     )} Id: ${1 + prayer.alarmId}');
+      //   }
+      //   String prayerTime = DateFormat('HH:mm').format(prayer.time!);
+      //   iosNotificationSchedular(
+      //       prayer.alarmId,
+      //       prayer.time!,
+      //       '$translatedPrayerName $prayerTime',
+      //       prayer.mosqueName,
+      //       prayer.sound);
+      //   print(
+      //       'Notification scheduled for ${prayer.prayerName} at : ${prayer.time} Id: ${prayer.alarmId}');
+      // }
+    }
+
+    await prefs.setStringList('alarmIds', newAlarmIds);
+    print(newAlarmIds.toList());
+  }
+
+  scheduleIOS() async {
+    var prayersList = await PrayerService().getPrayers();
+    int i = 0, j = 0;
+
+    while (j < 63) {
+
+      var prayer = prayersList[i];
+      int index = getPrayerIndex(prayer.prayerName!);
+
+      String translatedPrayerName = await PrayersName().getPrayerName(index);
+      String minutesToAthan = await PrayersName().getStringText();
+
+      //for pre notification
+      if (prayer.notificationBeforeAthan != 0) {
           String title =
               '${prayer.notificationBeforeAthan.toString()} $minutesToAthan $translatedPrayerName';
-          scheduleIOS(
+          iosNotificationSchedular(
             1 + prayer.alarmId,
             prayer.time!
                 .subtract(Duration(minutes: prayer.notificationBeforeAthan)),
@@ -206,9 +253,13 @@ class ScheduleAdhan {
               'Pre Notification scheduled for ${prayer.prayerName} at : ${prayer.time!.subtract(
             Duration(minutes: prayer.notificationBeforeAthan),
           )} Id: ${1 + prayer.alarmId}');
+          
+          j++;
         }
-        String prayerTime = DateFormat('HH:mm').format(prayer.time!);
-        scheduleIOS(
+        
+        //for Athan Notification
+         String prayerTime = DateFormat('HH:mm').format(prayer.time!);
+        iosNotificationSchedular(
             prayer.alarmId,
             prayer.time!,
             '$translatedPrayerName $prayerTime',
@@ -216,11 +267,9 @@ class ScheduleAdhan {
             prayer.sound);
         print(
             'Notification scheduled for ${prayer.prayerName} at : ${prayer.time} Id: ${prayer.alarmId}');
-      }
+        j++;
+        i++;
     }
-
-    await prefs.setStringList('alarmIds', newAlarmIds);
-    print(newAlarmIds.toList());
   }
 
   Future<void> initAlarmManager() async {
@@ -240,42 +289,46 @@ class ScheduleAdhan {
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
-  Future<void> scheduleIOS(
+ Future<void> iosNotificationSchedular(
     int? id,
     DateTime date,
     String? title,
     String? body,
     String? soundId,
   ) async {
-    final iOSPlatformChannelSpecifics = DarwinNotificationDetails(
-      sound: soundId,
-      presentSound: true,
-      presentAlert: true,
-      presentBadge: true,
-    );
+    try {
+      final iOSPlatformChannelSpecifics = DarwinNotificationDetails(
+        sound: soundId,
+        presentSound: true,
+        presentAlert: true,
+        presentBadge: true,
+      );
 
-    final platformChannelSpecifics = NotificationDetails(
-      iOS: iOSPlatformChannelSpecifics,
-    );
+      final platformChannelSpecifics = NotificationDetails(
+        iOS: iOSPlatformChannelSpecifics,
+      );
 
-    tzl.initializeTimeZones();
-    final timeZoneName = await FlutterTimezone.getLocalTimezone();
-    final location = tz.getLocation(timeZoneName);
-    tz.setLocalLocation(tz.getLocation(timeZoneName));
-    final scheduledDate = tz.TZDateTime.from(date, location);
+      tzl.initializeTimeZones();
+      final timeZoneName = await FlutterTimezone.getLocalTimezone();
+      final location = tz.getLocation(timeZoneName);
+      tz.setLocalLocation(tz.getLocation(timeZoneName));
+      final scheduledDate = tz.TZDateTime.from(date, location);
 
-    tz.TZDateTime now = tz.TZDateTime.now(location);
-    if (now.isAfter(scheduledDate)) return;
+      tz.TZDateTime now = tz.TZDateTime.now(location);
+      if (now.isAfter(scheduledDate)) return;
 
-    await flutterLocalNotificationsPlugin.zonedSchedule(
-      id!,
-      title,
-      body,
-      scheduledDate,
-      platformChannelSpecifics,
-      androidScheduleMode: AndroidScheduleMode.alarmClock,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.wallClockTime,
-    );
+      await flutterLocalNotificationsPlugin.zonedSchedule(
+        id!,
+        title,
+        body,
+        scheduledDate,
+        platformChannelSpecifics,
+        androidScheduleMode: AndroidScheduleMode.alarmClock,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.wallClockTime,
+      );
+    } on Exception catch (e) {
+      print('ERROR: $e');
+    }
   }
 }
