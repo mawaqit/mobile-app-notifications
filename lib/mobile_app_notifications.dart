@@ -59,9 +59,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
     ]);
     await AwesomeNotifications().createNotification(
       content: NotificationContent(
-        id: isPreNotification
-            ? index + 10
-            : (adhanSound == null ? index + 20 : index + 1),
+        id: id,
         channelKey: isPreNotification ? 'pre_notif' : adhanSound ?? 'DEFAULT',
         title: isPreNotification
             ? '$time $minutesToAthan $prayer'
@@ -77,7 +75,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
 
     ScheduleAdhan scheduleAdhan = ScheduleAdhan();
     if (!isPreNotification) {
-      scheduleAdhan.schedule();
+      // scheduleAdhan.schedule();
     }
   } catch (e, t) {
     print('an error occurs');
@@ -145,12 +143,13 @@ class ScheduleAdhan {
       if (Platform.isAndroid) {
         //for Pre notification
         if (prayer.notificationBeforeAthan != 0) {
-          newAlarmIds.add((1 + prayer.alarmId).toString());
+          var id = "1${prayer.alarmId}";
+          newAlarmIds.add(id);
           try {
             AndroidAlarmManager.oneShotAt(
                 prayer.time!.subtract(
                     Duration(minutes: prayer.notificationBeforeAthan)),
-                1 + prayer.alarmId,
+                int.parse(id),
                 ringAlarm,
                 alarmClock: true,
                 allowWhileIdle: true,
@@ -169,7 +168,7 @@ class ScheduleAdhan {
             print(
                 'Pre Notification scheduled for ${prayer.prayerName} at : ${prayer.time!.subtract(
               Duration(minutes: prayer.notificationBeforeAthan),
-            )} Id: ${1 + prayer.alarmId}');
+            )} Id: $id');
           } catch (e, t) {
             print(t);
             print(e);
@@ -179,7 +178,7 @@ class ScheduleAdhan {
         String prayerTime = DateFormat('HH:mm').format(prayer.time!);
         newAlarmIds.add(prayer.alarmId.toString());
         try {
-          AndroidAlarmManager.oneShotAt(prayer.time!, prayer.alarmId, ringAlarm,
+          AndroidAlarmManager.oneShotAt(i == 0 ? DateTime.now().add(Duration(seconds: 10)) : prayer.time!, prayer.alarmId, ringAlarm,
               alarmClock: true,
               allowWhileIdle: true,
               exact: true,
@@ -308,8 +307,6 @@ class ScheduleAdhan {
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.wallClockTime,
       );
-
-
     } on Exception catch (e) {
       print('ERROR: $e');
     }

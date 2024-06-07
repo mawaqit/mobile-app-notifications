@@ -54,12 +54,12 @@ class PrayerService {
           String str = indexStr + dayStr + monthStr;
           int alarmId = int.parse(str);
           print('Alarm ID: $alarmId');
-
+var testTime = DateTime.now().add(Duration(seconds: i * 10));
           NotificationInfoModel prayer = NotificationInfoModel(
             mosqueName: mosque.name,
             sound: obj.notificationSound,
             prayerName: prayerName,
-            time: time,
+            time: testTime,
             notificationBeforeAthan: notificationData!.notificationBeforeAthan!,
             alarmId: alarmId,
           );
