@@ -1,4 +1,4 @@
-// ignore_for_file: avoid_print
+// ignore_for_file: avoid_print, unused_local_variable
 
 library mobile_app_notifications;
 
@@ -75,7 +75,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
 
     ScheduleAdhan scheduleAdhan = ScheduleAdhan();
     if (!isPreNotification) {
-      // scheduleAdhan.schedule();
+      scheduleAdhan.schedule();
     }
   } catch (e, t) {
     print('an error occurs');
@@ -178,7 +178,10 @@ class ScheduleAdhan {
         String prayerTime = DateFormat('HH:mm').format(prayer.time!);
         newAlarmIds.add(prayer.alarmId.toString());
         try {
-          AndroidAlarmManager.oneShotAt(i == 0 ? DateTime.now().add(Duration(seconds: 10)) : prayer.time!, prayer.alarmId, ringAlarm,
+          AndroidAlarmManager.oneShotAt(
+              prayer.time!,
+              prayer.alarmId,
+              ringAlarm,
               alarmClock: true,
               allowWhileIdle: true,
               exact: true,
