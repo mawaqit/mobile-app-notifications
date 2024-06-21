@@ -141,16 +141,18 @@ class ScheduleAdhan {
       String translatedPrayerName = await PrayersName().getPrayerName(index);
       String minutesToAthan = await PrayersName().getStringText();
       if (Platform.isAndroid) {
+
         //for Pre notification
-        if (prayer.notificationBeforeAthan != 0) {
+        var preNotificationTime = prayer.time!
+            .subtract(Duration(minutes: prayer.notificationBeforeAthan));
+
+        if (prayer.notificationBeforeAthan != 0 &&
+            preNotificationTime.isAfter(DateTime.now())) {
           var id = "1${prayer.alarmId}";
           newAlarmIds.add(id);
           try {
             AndroidAlarmManager.oneShotAt(
-                prayer.time!.subtract(
-                    Duration(minutes: prayer.notificationBeforeAthan)),
-                int.parse(id),
-                ringAlarm,
+                preNotificationTime, int.parse(id), ringAlarm,
                 alarmClock: true,
                 allowWhileIdle: true,
                 exact: true,
@@ -166,9 +168,7 @@ class ScheduleAdhan {
                   'minutesToAthan': minutesToAthan,
                 });
             print(
-                'Pre Notification scheduled for ${prayer.prayerName} at : ${prayer.time!.subtract(
-              Duration(minutes: prayer.notificationBeforeAthan),
-            )} Id: $id');
+                'Pre Notification scheduled for ${prayer.prayerName} at : $preNotificationTime Id: $id');
           } catch (e, t) {
             print(t);
             print(e);
@@ -178,10 +178,7 @@ class ScheduleAdhan {
         String prayerTime = DateFormat('HH:mm').format(prayer.time!);
         newAlarmIds.add(prayer.alarmId.toString());
         try {
-          AndroidAlarmManager.oneShotAt(
-              prayer.time!,
-              prayer.alarmId,
-              ringAlarm,
+          AndroidAlarmManager.oneShotAt(prayer.time!, prayer.alarmId, ringAlarm,
               alarmClock: true,
               allowWhileIdle: true,
               exact: true,
