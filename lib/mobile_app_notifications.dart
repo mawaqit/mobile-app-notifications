@@ -141,7 +141,6 @@ class ScheduleAdhan {
       String translatedPrayerName = await PrayersName().getPrayerName(index);
       String minutesToAthan = await PrayersName().getStringText();
       if (Platform.isAndroid) {
-
         //for Pre notification
         var preNotificationTime = prayer.time!
             .subtract(Duration(minutes: prayer.notificationBeforeAthan));
@@ -221,21 +220,21 @@ class ScheduleAdhan {
       String minutesToAthan = await PrayersName().getStringText();
 
       //for pre notification
-      if (prayer.notificationBeforeAthan != 0) {
+      var preNotificationTime = prayer.time!
+          .subtract(Duration(minutes: prayer.notificationBeforeAthan));
+      if (prayer.notificationBeforeAthan != 0 &&
+          preNotificationTime.isAfter(DateTime.now())) {
         String title =
             '${prayer.notificationBeforeAthan.toString()} $minutesToAthan $translatedPrayerName';
         iosNotificationSchedular(
           int.parse(("1${prayer.alarmId}")),
-          prayer.time!
-              .subtract(Duration(minutes: prayer.notificationBeforeAthan)),
+          preNotificationTime,
           title,
           prayer.mosqueName,
           null,
         );
         print(
-            'Pre Notification scheduled for ${prayer.prayerName} at : ${prayer.time!.subtract(
-          Duration(minutes: prayer.notificationBeforeAthan),
-        )} Id: ${1 + prayer.alarmId}');
+            'Pre Notification scheduled for ${prayer.prayerName} at : $preNotificationTime Id: ${1 + prayer.alarmId}');
 
         j++;
       }
