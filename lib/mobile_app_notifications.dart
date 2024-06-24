@@ -211,42 +211,49 @@ class ScheduleAdhan {
 
     var prayersList = await PrayerService().getPrayers();
     int i = 0, j = 0;
+    if (prayersList.isEmpty) {
+      return;
+    } else {
+      while (j < 63) {
+        var prayer = prayersList[i];
+        int index = getPrayerIndex(prayer.prayerName!);
 
-    while (j < 63) {
-      var prayer = prayersList[i];
-      int index = getPrayerIndex(prayer.prayerName!);
+        String translatedPrayerName = await PrayersName().getPrayerName(index);
+        String minutesToAthan = await PrayersName().getStringText();
 
-      String translatedPrayerName = await PrayersName().getPrayerName(index);
-      String minutesToAthan = await PrayersName().getStringText();
+        //for pre notification
+        var preNotificationTime = prayer.time!
+            .subtract(Duration(minutes: prayer.notificationBeforeAthan));
+        if (prayer.notificationBeforeAthan != 0 &&
+            preNotificationTime.isAfter(DateTime.now())) {
+          String title =
+              '${prayer.notificationBeforeAthan.toString()} $minutesToAthan $translatedPrayerName';
+          iosNotificationSchedular(
+            int.parse(("1${prayer.alarmId}")),
+            preNotificationTime,
+            title,
+            prayer.mosqueName,
+            null,
+          );
+          print(
+              'Pre Notification scheduled for ${prayer.prayerName} at : $preNotificationTime Id: ${1 + prayer.alarmId}');
 
-      //for pre notification
-      var preNotificationTime = prayer.time!
-          .subtract(Duration(minutes: prayer.notificationBeforeAthan));
-      if (prayer.notificationBeforeAthan != 0 &&
-          preNotificationTime.isAfter(DateTime.now())) {
-        String title =
-            '${prayer.notificationBeforeAthan.toString()} $minutesToAthan $translatedPrayerName';
+          j++;
+        }
+
+        //for Athan Notification
+        String prayerTime = DateFormat('HH:mm').format(prayer.time!);
         iosNotificationSchedular(
-          int.parse(("1${prayer.alarmId}")),
-          preNotificationTime,
-          title,
-          prayer.mosqueName,
-          null,
-        );
+            prayer.alarmId,
+            prayer.time!,
+            '$translatedPrayerName $prayerTime',
+            prayer.mosqueName,
+            prayer.sound);
         print(
-            'Pre Notification scheduled for ${prayer.prayerName} at : $preNotificationTime Id: ${1 + prayer.alarmId}');
-
+            'Notification scheduled for ${prayer.prayerName} at : ${prayer.time} Id: ${prayer.alarmId}');
         j++;
+        i++;
       }
-
-      //for Athan Notification
-      String prayerTime = DateFormat('HH:mm').format(prayer.time!);
-      iosNotificationSchedular(prayer.alarmId, prayer.time!,
-          '$translatedPrayerName $prayerTime', prayer.mosqueName, prayer.sound);
-      print(
-          'Notification scheduled for ${prayer.prayerName} at : ${prayer.time} Id: ${prayer.alarmId}');
-      j++;
-      i++;
     }
   }
 

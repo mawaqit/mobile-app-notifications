@@ -1,6 +1,6 @@
 name: mobile_app_notifications
 description: "A new Flutter project."
-version: 0.0.8
+version: 0.0.9
 homepage: https://github.com/mawaqit/mobile-app-notifications
 
 environment:
