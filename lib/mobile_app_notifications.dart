@@ -97,6 +97,8 @@ class ScheduleAdhan {
         return 4;
       case 'Isha':
         return 5;
+      case 'Shuruq':
+        return 6;
       default:
         return 0;
     }
@@ -176,8 +178,17 @@ class ScheduleAdhan {
         //for Adhan notification
         String prayerTime = DateFormat('HH:mm').format(prayer.time!);
         newAlarmIds.add(prayer.alarmId.toString());
+        DateTime notificationTime;
+        if (index == 6) {
+          int notificationBeforeShuruq =
+              prefs.getInt('notificationBeforeShuruq') ?? 0;
+          notificationTime = prayer.time!
+            .subtract(Duration(minutes: notificationBeforeShuruq));
+        } else{
+          notificationTime = prayer.time!;
+        }
         try {
-          AndroidAlarmManager.oneShotAt(prayer.time!, prayer.alarmId, ringAlarm,
+          AndroidAlarmManager.oneShotAt(notificationTime, prayer.alarmId, ringAlarm,
               alarmClock: true,
               allowWhileIdle: true,
               exact: true,
@@ -197,7 +208,7 @@ class ScheduleAdhan {
           print(e);
         }
         print(
-            'Notification scheduled for ${prayer.prayerName} at : ${prayer.time} Id: ${prayer.alarmId}');
+            'Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
       }
     }
 

@@ -16,6 +16,7 @@ class PrayerService {
     'ASR_NOTIFICATION',
     'MAGRIB_NOTIFICATION',
     'ISHAA_NOTIFICATION',
+    'SHURUQ_NOTIFICATION'
   ];
 
   Future<List<NotificationInfoModel>> getPrayers() async {
@@ -71,8 +72,12 @@ class PrayerService {
     prayersList.removeWhere((element) {
       return element.time!.isBefore(DateTime.now());
     });
-    prayersList = prayersList.sublist(
-        0, Platform.isIOS ? 63 : 5);
+    prayersList.sort(
+      (a, b) => a.time!.millisecondsSinceEpoch
+          .toString()
+          .compareTo(b.time!.millisecondsSinceEpoch.toString()),
+    );
+    prayersList = prayersList.sublist(0, Platform.isIOS ? 63 : 5);
     return prayersList;
   }
 
@@ -101,6 +106,8 @@ class PrayerService {
         return 'Maghrib';
       case 5:
         return 'Isha';
+      case 6:
+        return 'Shuruq';
       default:
         return 'Unknown';
     }
@@ -116,7 +123,8 @@ class PrayerService {
           (calendar[now.month - 1] as Map<String, dynamic>).values.toList();
       var todayTimes = monthCalendar[now.day - 1];
 
-      var prayerTime = todayTimes[prayerKeys.indexOf(key)];
+      var prayerTime = todayTimes[
+          prayerKeys.indexOf(key) == 6 ? 1 : prayerKeys.indexOf(key)];
 
       var todayTime = DateTime(
         now.year,
