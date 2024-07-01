@@ -61,9 +61,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       content: NotificationContent(
         id: id,
         channelKey: isPreNotification ? 'pre_notif' : adhanSound ?? 'DEFAULT',
-        title: isPreNotification
-            ? '$time $minutesToAthan $prayer'
-            : '$prayer  $time',
+        title: isPreNotification ? '$time $minutesToAthan $prayer' : '$prayer  $time',
         body: mosque,
         category: NotificationCategory.Reminder,
         criticalAlert: true,
@@ -113,6 +111,19 @@ class ScheduleAdhan {
     'ISHAA_NOTIFICATION',
   ];
 
+  void checkIOSNotificationPermissions() async {
+    final iosPlugin = flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
+    final permissionStatus = await iosPlugin?.checkPermissions();
+    if (permissionStatus == null) {
+      print('Could not get permission status');
+      return;
+    }
+    print('OverAll: ${permissionStatus.isEnabled}');
+    print('Alert: ${permissionStatus.isAlertEnabled}');
+    print('Badge: ${permissionStatus.isBadgeEnabled}');
+    print('Sound: ${permissionStatus.isSoundEnabled}');
+  }
+
   schedule() {
     if (Platform.isAndroid) {
       scheduleAndroid();
@@ -144,16 +155,13 @@ class ScheduleAdhan {
       String minutesToAthan = await PrayersName().getStringText();
       if (Platform.isAndroid) {
         //for Pre notification
-        var preNotificationTime = prayer.time!
-            .subtract(Duration(minutes: prayer.notificationBeforeAthan));
+        var preNotificationTime = prayer.time!.subtract(Duration(minutes: prayer.notificationBeforeAthan));
 
-        if (prayer.notificationBeforeAthan != 0 &&
-            preNotificationTime.isAfter(DateTime.now())) {
+        if (prayer.notificationBeforeAthan != 0 && preNotificationTime.isAfter(DateTime.now())) {
           var id = "1${prayer.alarmId}";
           newAlarmIds.add(id);
           try {
-            AndroidAlarmManager.oneShotAt(
-                preNotificationTime, int.parse(id), ringAlarm,
+            AndroidAlarmManager.oneShotAt(preNotificationTime, int.parse(id), ringAlarm,
                 alarmClock: true,
                 allowWhileIdle: true,
                 exact: true,
@@ -168,8 +176,7 @@ class ScheduleAdhan {
                   'isPreNotification': true,
                   'minutesToAthan': minutesToAthan,
                 });
-            print(
-                'Pre Notification scheduled for ${prayer.prayerName} at : $preNotificationTime Id: $id');
+            print('Pre Notification scheduled for ${prayer.prayerName} at : $preNotificationTime Id: $id');
           } catch (e, t) {
             print(t);
             print(e);
@@ -180,11 +187,9 @@ class ScheduleAdhan {
         newAlarmIds.add(prayer.alarmId.toString());
         DateTime notificationTime;
         if (index == 6) {
-          int notificationBeforeShuruq =
-              prefs.getInt('notificationBeforeShuruq') ?? 0;
-          notificationTime = prayer.time!
-            .subtract(Duration(minutes: notificationBeforeShuruq));
-        } else{
+          int notificationBeforeShuruq = prefs.getInt('notificationBeforeShuruq') ?? 0;
+          notificationTime = prayer.time!.subtract(Duration(minutes: notificationBeforeShuruq));
+        } else {
           notificationTime = prayer.time!;
         }
         try {
@@ -207,8 +212,7 @@ class ScheduleAdhan {
           print(t);
           print(e);
         }
-        print(
-            'Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
+        print('Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
       }
     }
 
@@ -233,12 +237,9 @@ class ScheduleAdhan {
         String minutesToAthan = await PrayersName().getStringText();
 
         //for pre notification
-        var preNotificationTime = prayer.time!
-            .subtract(Duration(minutes: prayer.notificationBeforeAthan));
-        if (prayer.notificationBeforeAthan != 0 &&
-            preNotificationTime.isAfter(DateTime.now())) {
-          String title =
-              '${prayer.notificationBeforeAthan.toString()} $minutesToAthan $translatedPrayerName';
+        var preNotificationTime = prayer.time!.subtract(Duration(minutes: prayer.notificationBeforeAthan));
+        if (prayer.notificationBeforeAthan != 0 && preNotificationTime.isAfter(DateTime.now())) {
+          String title = '${prayer.notificationBeforeAthan.toString()} $minutesToAthan $translatedPrayerName';
           iosNotificationSchedular(
             int.parse(("1${prayer.alarmId}")),
             preNotificationTime,
@@ -246,22 +247,15 @@ class ScheduleAdhan {
             prayer.mosqueName,
             null,
           );
-          print(
-              'Pre Notification scheduled for ${prayer.prayerName} at : $preNotificationTime Id: ${1 + prayer.alarmId}');
+          print('Pre Notification scheduled for ${prayer.prayerName} at : $preNotificationTime Id: ${1 + prayer.alarmId}');
 
           j++;
         }
 
         //for Athan Notification
         String prayerTime = DateFormat('HH:mm').format(prayer.time!);
-        iosNotificationSchedular(
-            prayer.alarmId,
-            prayer.time!,
-            '$translatedPrayerName $prayerTime',
-            prayer.mosqueName,
-            prayer.sound);
-        print(
-            'Notification scheduled for ${prayer.prayerName} at : ${prayer.time} Id: ${prayer.alarmId}');
+        iosNotificationSchedular(prayer.alarmId, prayer.time!, '$translatedPrayerName $prayerTime', prayer.mosqueName, prayer.sound);
+        print('Notification scheduled for ${prayer.prayerName} at : ${prayer.time} Id: ${prayer.alarmId}');
         j++;
         i++;
       }
@@ -321,8 +315,7 @@ class ScheduleAdhan {
         scheduledDate,
         platformChannelSpecifics,
         androidScheduleMode: AndroidScheduleMode.alarmClock,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.wallClockTime,
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.wallClockTime,
       );
     } on Exception catch (e) {
       print('ERROR: $e');
