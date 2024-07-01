@@ -111,7 +111,7 @@ class ScheduleAdhan {
     'ISHAA_NOTIFICATION',
   ];
 
-  void checkIOSNotificationPermissions() async {
+  checkIOSNotificationPermissions() async {
     final iosPlugin = flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
     final permissionStatus = await iosPlugin?.checkPermissions();
     if (permissionStatus == null) {
