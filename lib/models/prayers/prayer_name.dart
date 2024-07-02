@@ -266,6 +266,76 @@ class PrayersName {
     }
   }
 
+  Future<String> getInText() async {
+    String language = await getLanguage();
+    switch (language) {
+      case 'ar':
+        return 'في';
+      case 'bn':
+        return 'ভিতরে';
+      case 'de':
+        return 'in';
+      case 'en':
+        return 'in';
+      case 'es':
+        return 'en';
+      case 'fr':
+        return 'dans';
+      case 'id':
+        return 'dalam';
+      case 'it':
+        return 'in';
+      case 'nl':
+        return 'in';
+      case 'pl':
+        return 'w';
+      case 'ru':
+        return 'в';
+      case 'tr':
+        return 'içinde';
+      case 'ur':
+        return 'میں';
+
+      default:
+        return 'in';
+    }
+  }
+
+  Future<String> getMinutesText() async {
+    String language = await getLanguage();
+    switch (language) {
+      case 'ar':
+        return 'دقائق';
+      case 'bn':
+        return 'মিনিট';
+      case 'de':
+        return 'Minuten';
+      case 'en':
+        return 'minutes';
+      case 'es':
+        return 'minutos';
+      case 'fr':
+        return 'minutes';
+      case 'id':
+        return 'menit';
+      case 'it':
+        return 'minuti';
+      case 'nl':
+        return 'minuten';
+      case 'pl':
+        return 'minuty';
+      case 'ru':
+        return 'минуты';
+      case 'tr':
+        return 'dakika';
+      case 'ur':
+        return 'منٹ';
+
+      default:
+        return 'minutes';
+    }
+  }
+
   Future<String> getLanguage() async {
     final db = await SharedPreferences.getInstance();
     return db.getString('MAWAQIT_LANGUAGE') ?? '';
