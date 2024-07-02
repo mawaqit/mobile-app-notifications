@@ -124,6 +124,21 @@ class ScheduleAdhan {
     'ISHAA_NOTIFICATION',
   ];
 
+  Future<bool> checkIOSNotificationPermissions() async {
+    final iosPlugin = flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
+    final permissionStatus = await iosPlugin?.checkPermissions();
+    if (permissionStatus == null) {
+      print('Could not get permission status');
+      return false;
+    } else {
+      print('OverAll: ${permissionStatus.isEnabled}');
+      print('Alert: ${permissionStatus.isAlertEnabled}');
+      print('Badge: ${permissionStatus.isBadgeEnabled}');
+      print('Sound: ${permissionStatus.isSoundEnabled}');
+      return permissionStatus.isEnabled && permissionStatus.isAlertEnabled && permissionStatus.isBadgeEnabled && permissionStatus.isSoundEnabled;
+    }
+  }
+
   schedule() {
     if (Platform.isAndroid) {
       scheduleAndroid();
@@ -276,7 +291,7 @@ class ScheduleAdhan {
         DateTime notificationTime;
         String notificationTitle;
         int notificationBeforeShuruq;
-        
+
 
         if (index == 6) {
           notificationBeforeShuruq =
