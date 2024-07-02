@@ -11,20 +11,21 @@ import 'models/prayers/prayer_notification.dart';
 class PrayerService {
   final List<String> prayerKeys = [
     'FAJR_NOTIFICATION',
-    '',
+    'SHURUQ_NOTIFICATION',
     'DUHR_NOTIFICATION',
     'ASR_NOTIFICATION',
     'MAGRIB_NOTIFICATION',
     'ISHAA_NOTIFICATION',
-    'SHURUQ_NOTIFICATION'
   ];
 
   Future<List<NotificationInfoModel>> getPrayers() async {
     List<NotificationInfoModel> prayersList = [];
     var scheduledCount = 0;
     for (var key in prayerKeys) {
+      print(key);
       var obj =
           await PrayerNotificationService().getPrayerNotificationFromDB(key);
+      print(obj.mosqueUuid);
       if (obj.mosqueUuid != null) {
         scheduledCount++;
       }
@@ -106,7 +107,7 @@ class PrayerService {
         return 'Maghrib';
       case 5:
         return 'Isha';
-      case 6:
+      case 1:
         return 'Shuruq';
       default:
         return 'Unknown';
@@ -124,7 +125,7 @@ class PrayerService {
       var todayTimes = monthCalendar[now.day - 1];
 
       var prayerTime = todayTimes[
-          prayerKeys.indexOf(key) == 6 ? 1 : prayerKeys.indexOf(key)];
+          prayerKeys.indexOf(key)];
 
       var todayTime = DateTime(
         now.year,

@@ -109,7 +109,7 @@ class ScheduleAdhan {
       case 'Isha':
         return 5;
       case 'Shuruq':
-        return 6;
+        return 1;
       default:
         return 0;
     }
@@ -117,7 +117,7 @@ class ScheduleAdhan {
 
   final prayerKeys = [
     'FAJR_NOTIFICATION',
-    '',
+    'SHURUQ_NOTIFICATION',
     'DUHR_NOTIFICATION',
     'ASR_NOTIFICATION',
     'MAGRIB_NOTIFICATION',
@@ -160,6 +160,8 @@ class ScheduleAdhan {
     await prefs.setStringList('alarmIds', []);
 
     var prayersList = await PrayerService().getPrayers();
+
+    print(prayersList.length);
     List<String> newAlarmIds = [];
 
     for (var i = 0; i < prayersList.length; i++) {
@@ -207,7 +209,7 @@ class ScheduleAdhan {
         newAlarmIds.add(prayer.alarmId.toString());
         DateTime notificationTime;
         int notificationBeforeShuruq;
-        if (index == 6) {
+        if (index == 1) {
           notificationBeforeShuruq =
               prefs.getInt('notificationBeforeShuruq') ?? 0;
           notificationTime = prayer.time!
@@ -293,7 +295,7 @@ class ScheduleAdhan {
         int notificationBeforeShuruq;
 
 
-        if (index == 6) {
+        if (index == 1) {
           notificationBeforeShuruq =
               prefs.getInt('notificationBeforeShuruq') ?? 0;
           notificationTime = prayer.time!
