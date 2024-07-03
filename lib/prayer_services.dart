@@ -16,16 +16,15 @@ class PrayerService {
     'ASR_NOTIFICATION',
     'MAGRIB_NOTIFICATION',
     'ISHAA_NOTIFICATION',
+    'IMSAK_NOTIFICATION',
   ];
 
   Future<List<NotificationInfoModel>> getPrayers() async {
     List<NotificationInfoModel> prayersList = [];
     var scheduledCount = 0;
     for (var key in prayerKeys) {
-      print(key);
       var obj =
           await PrayerNotificationService().getPrayerNotificationFromDB(key);
-      print(obj.mosqueUuid);
       if (obj.mosqueUuid != null) {
         scheduledCount++;
       }
@@ -99,6 +98,8 @@ class PrayerService {
     switch (index) {
       case 0:
         return 'Fajr';
+      case 1:
+        return 'Shuruq';
       case 2:
         return 'Duhr';
       case 3:
@@ -107,8 +108,8 @@ class PrayerService {
         return 'Maghrib';
       case 5:
         return 'Isha';
-      case 1:
-        return 'Shuruq';
+      case 6:
+        return 'Imsak';
       default:
         return 'Unknown';
     }
@@ -119,13 +120,33 @@ class PrayerService {
 
     var calendar = mosque.calendar;
 
+
+var index = prayerKeys.indexOf(key);
+
+    if(index == 6){
+      var calendar = mosque.imsakCalendar!;
+      
+      var monthCalendar =
+          (calendar[now.month - 1] as Map<String, dynamic>).values.toList();
+      var prayerTime = monthCalendar[now.day - 1];
+      
+      var todayTime = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        int.parse(prayerTime.toString().split(':')[0]),
+        int.parse(prayerTime.toString().split(':')[1]),
+      );
+  
+
+      return todayTime;
+    }
     if (calendar != null) {
       var monthCalendar =
           (calendar[now.month - 1] as Map<String, dynamic>).values.toList();
       var todayTimes = monthCalendar[now.day - 1];
 
-      var prayerTime = todayTimes[
-          prayerKeys.indexOf(key)];
+      var prayerTime = todayTimes[index];
 
       var todayTime = DateTime(
         now.year,
@@ -134,6 +155,7 @@ class PrayerService {
         int.parse(prayerTime.toString().split(':')[0]),
         int.parse(prayerTime.toString().split(':')[1]),
       );
+
 
       return todayTime;
     }

@@ -40,7 +40,8 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
         String inText = await PrayersName().getInText();
         String minutes = await PrayersName().getMinutesText();
         print('notificationBeforeShuruq : $notificationBeforeShuruq');
-        notificationTitle = '$prayer $inText $notificationBeforeShuruq $minutes';
+        notificationTitle =
+            '$prayer $inText $notificationBeforeShuruq $minutes';
       } else {
         print('notificationBeforeShuruq : $notificationBeforeShuruq');
         notificationTitle = '$prayer  $time';
@@ -110,6 +111,8 @@ class ScheduleAdhan {
         return 5;
       case 'Shuruq':
         return 1;
+      case 'Imsak':
+        return 6;
       default:
         return 0;
     }
@@ -122,10 +125,13 @@ class ScheduleAdhan {
     'ASR_NOTIFICATION',
     'MAGRIB_NOTIFICATION',
     'ISHAA_NOTIFICATION',
+    'IMSAK_NOTIFICATION',
   ];
 
   Future<bool> checkIOSNotificationPermissions() async {
-    final iosPlugin = flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
+    final iosPlugin =
+        flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>();
     final permissionStatus = await iosPlugin?.checkPermissions();
     if (permissionStatus == null) {
       print('Could not get permission status');
@@ -135,7 +141,10 @@ class ScheduleAdhan {
       print('Alert: ${permissionStatus.isAlertEnabled}');
       print('Badge: ${permissionStatus.isBadgeEnabled}');
       print('Sound: ${permissionStatus.isSoundEnabled}');
-      return permissionStatus.isEnabled && permissionStatus.isAlertEnabled && permissionStatus.isBadgeEnabled && permissionStatus.isSoundEnabled;
+      return permissionStatus.isEnabled &&
+          permissionStatus.isAlertEnabled &&
+          permissionStatus.isBadgeEnabled &&
+          permissionStatus.isSoundEnabled;
     }
   }
 
@@ -161,7 +170,6 @@ class ScheduleAdhan {
 
     var prayersList = await PrayerService().getPrayers();
 
-    print(prayersList.length);
     List<String> newAlarmIds = [];
 
     for (var i = 0; i < prayersList.length; i++) {
@@ -293,7 +301,6 @@ class ScheduleAdhan {
         DateTime notificationTime;
         String notificationTitle;
         int notificationBeforeShuruq;
-
 
         if (index == 1) {
           notificationBeforeShuruq =

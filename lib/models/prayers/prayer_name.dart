@@ -9,6 +9,8 @@ class PrayersName {
         switch (index) {
           case 0:
             return 'الفجر';
+          case 1:
+            return 'الشروق';
           case 2:
             return 'الظهر';
           case 3:
@@ -17,8 +19,8 @@ class PrayersName {
             return 'المغرب';
           case 5:
             return 'العشاء';
-          case 1:
-            return 'الشروق';
+          case 6:
+            return 'الإمساك';
           default:
             return 'غير معروف';
         }
@@ -26,6 +28,8 @@ class PrayersName {
         switch (index) {
           case 0:
             return 'ফজর';
+          case 1:
+            return 'শুরুক';
           case 2:
             return 'দুহর';
           case 3:
@@ -34,8 +38,8 @@ class PrayersName {
             return 'মাগরিব';
           case 5:
             return 'ইশা';
-          case 1:
-            return 'শুরুক';
+          case 6:
+            return 'ইমসাক';
           default:
             return 'অজানা';
         }
@@ -43,6 +47,8 @@ class PrayersName {
         switch (index) {
           case 0:
             return 'Fadjr';
+          case 1:
+            return 'Shuruq';
           case 2:
             return 'Dohr';
           case 3:
@@ -51,8 +57,8 @@ class PrayersName {
             return 'Maghrib';
           case 5:
             return 'Ishaa';
-          case 1:
-            return 'Shuruq';
+          case 6:
+            return 'Imsak';
           default:
             return 'Άγνωστος';
         }
@@ -60,6 +66,8 @@ class PrayersName {
         switch (index) {
           case 0:
             return 'Fajr';
+          case 1:
+            return 'Shuruq';
           case 2:
             return 'Duhr';
           case 3:
@@ -68,8 +76,8 @@ class PrayersName {
             return 'Maghrib';
           case 5:
             return 'Isha';
-          case 1:
-            return 'Shuruq';
+          case 6:
+            return 'Imsak';
           default:
             return 'Unknown';
         }
@@ -77,6 +85,8 @@ class PrayersName {
         switch (index) {
           case 0:
             return 'Fajr';
+          case 1:
+            return 'Shuruq';
           case 2:
             return 'Duhr';
           case 3:
@@ -85,8 +95,8 @@ class PrayersName {
             return 'Maghrib';
           case 5:
             return 'Ishaa';
-          case 1:
-            return 'Shuruq';
+          case 6:
+            return 'Imsak';
           default:
             return 'Desconocido';
         }
@@ -94,6 +104,8 @@ class PrayersName {
         switch (index) {
           case 0:
             return 'Fajr';
+          case 1:
+            return 'Shuruq';
           case 2:
             return 'Duhr';
           case 3:
@@ -102,8 +114,8 @@ class PrayersName {
             return 'Maghrib';
           case 5:
             return 'Isha';
-          case 1:
-            return 'Shuruq';
+          case 6:
+            return 'Imsak';
           default:
             return 'Inconnu';
         }
@@ -111,6 +123,8 @@ class PrayersName {
         switch (index) {
           case 0:
             return 'Subuh';
+          case 1:
+            return 'Shuruq';
           case 2:
             return 'Duhr';
           case 3:
@@ -119,8 +133,8 @@ class PrayersName {
             return 'Maghrib';
           case 5:
             return 'Isya.';
-          case 1:
-            return 'Shuruq';
+          case 6:
+            return 'Imsak';
           default:
             return 'Tidak diketahui';
         }
@@ -128,6 +142,8 @@ class PrayersName {
         switch (index) {
           case 0:
             return 'Fajr';
+          case 1:
+            return 'Shuruq';
           case 2:
             return 'Duhr';
           case 3:
@@ -136,8 +152,8 @@ class PrayersName {
             return 'Maghrib';
           case 5:
             return 'Ishaa';
-          case 1:
-            return 'Shuruq';
+          case 6:
+            return 'Imsak';
           default:
             return 'Sconosciuto';
         }
@@ -145,6 +161,8 @@ class PrayersName {
         switch (index) {
           case 0:
             return 'Fadjr';
+          case 1:
+            return 'Shoeroeq';
           case 2:
             return 'Dhoehr';
           case 3:
@@ -153,8 +171,8 @@ class PrayersName {
             return 'Maghrib';
           case 5:
             return "'Ishaa";
-          case 1:
-            return 'Shoeroeq';
+          case 6:
+            return 'Imsaak';
           default:
             return 'Onbekend';
         }
@@ -162,6 +180,8 @@ class PrayersName {
         switch (index) {
           case 0:
             return 'Fadżr';
+          case 1:
+            return 'Wschód';
           case 2:
             return 'Zuhr';
           case 3:
@@ -170,8 +190,8 @@ class PrayersName {
             return 'Maghrib';
           case 5:
             return 'Isza';
-          case 1:
-            return 'Wschód';
+          case 6:
+            return 'Imsak';
           default:
             return 'Nieznany';
         }
@@ -179,6 +199,8 @@ class PrayersName {
         switch (index) {
           case 0:
             return 'Фаджр';
+          case 1:
+            return 'Духа';
           case 2:
             return 'Зухр';
           case 3:
@@ -187,8 +209,8 @@ class PrayersName {
             return 'Магриб';
           case 5:
             return 'Иша';
-          case 1:
-            return 'Духа';
+          case 6:
+            return 'Рассвет';
           default:
             return 'Неизвестный';
         }
@@ -196,6 +218,8 @@ class PrayersName {
         switch (index) {
           case 0:
             return 'Sabah';
+          case 1:
+            return 'Güneş';
           case 2:
             return 'Öğlen';
           case 3:
@@ -204,8 +228,8 @@ class PrayersName {
             return 'Akşam';
           case 5:
             return 'Yatsı';
-          case 1:
-            return 'Güneş';
+          case 6:
+            return 'İmsak';
           default:
             return 'Bilinmeyen';
         }
@@ -213,6 +237,8 @@ class PrayersName {
         switch (index) {
           case 0:
             return 'فجر';
+          case 1:
+            return 'اشراق';
           case 2:
             return 'دہر';
           case 3:
@@ -221,8 +247,8 @@ class PrayersName {
             return 'مغرب';
           case 5:
             return 'عشاء';
-          case 1:
-            return 'اشراق';
+          case 6:
+            return 'اِمسَک';
           default:
             return 'نامعلوم';
         }
