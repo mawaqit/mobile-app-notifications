@@ -220,36 +220,44 @@ class ScheduleAdhan {
         if (index == 1) {
           notificationBeforeShuruq =
               prefs.getInt('notificationBeforeShuruq') ?? 0;
+
           notificationTime = prayer.time!
               .subtract(Duration(minutes: notificationBeforeShuruq));
+
         } else {
           notificationTime = prayer.time!;
           notificationBeforeShuruq = 0;
         }
-        try {
-          AndroidAlarmManager.oneShotAt(
-              notificationTime, prayer.alarmId, ringAlarm,
-              alarmClock: true,
-              allowWhileIdle: true,
-              exact: true,
-              wakeup: true,
-              rescheduleOnReboot: true,
-              params: {
-                'index': index,
-                'sound': prayer.sound,
-                'mosque': prayer.mosqueName,
-                'prayer': translatedPrayerName,
-                'time': prayerTime,
-                'isPreNotification': false,
-                'minutesToAthan': '',
-                'notificationBeforeShuruq': notificationBeforeShuruq,
-              });
-        } catch (e, t) {
-          print(t);
-          print(e);
+
+        if(notificationTime.isBefore(DateTime.now())){
+          try {
+            AndroidAlarmManager.oneShotAt(
+                notificationTime, prayer.alarmId, ringAlarm,
+                alarmClock: true,
+                allowWhileIdle: true,
+                exact: true,
+                wakeup: true,
+                rescheduleOnReboot: true,
+                params: {
+                  'index': index,
+                  'sound': prayer.sound,
+                  'mosque': prayer.mosqueName,
+                  'prayer': translatedPrayerName,
+                  'time': prayerTime,
+                  'isPreNotification': false,
+                  'minutesToAthan': '',
+                  'notificationBeforeShuruq': notificationBeforeShuruq,
+                });
+          } catch (e, t) {
+            print(t);
+            print(e);
+          }
+
+          print(
+              'Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
         }
-        print(
-            'Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
+
+
       }
     }
 
@@ -314,12 +322,16 @@ class ScheduleAdhan {
           notificationTime = prayer.time!;
           notificationTitle = '$translatedPrayerName $prayerTime';
         }
-        iosNotificationSchedular(prayer.alarmId, notificationTime,
-            notificationTitle, prayer.mosqueName, prayer.sound);
-        print(
-            'Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
-        j++;
-        i++;
+
+        if(notificationTime.isBefore(DateTime.now())){
+          iosNotificationSchedular(prayer.alarmId, notificationTime,
+              notificationTitle, prayer.mosqueName, prayer.sound);
+          j++;
+          i++;
+        }
+
+
+
       }
     }
   }
