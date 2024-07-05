@@ -19,13 +19,24 @@ class PrayerService {
     'IMSAK_NOTIFICATION',
   ];
 
+  bool check(PrayerNotification obj) {
+    if (obj.notificationSound == 'SILENT' && obj.notificationBeforeAthan == 0) {
+      return false;
+    } else if (obj.notificationSound == null &&
+        obj.notificationBeforeAthan == null) {
+      return false;
+    } else {
+      return true;
+    }
+  }
+
   Future<List<NotificationInfoModel>> getPrayers() async {
     List<NotificationInfoModel> prayersList = [];
     var scheduledCount = 0;
     for (var key in prayerKeys) {
       var obj =
           await PrayerNotificationService().getPrayerNotificationFromDB(key);
-      if (obj.mosqueUuid != null) {
+      if (check(obj)) {
         scheduledCount++;
       }
     }
@@ -41,7 +52,7 @@ class PrayerService {
         var obj =
             await PrayerNotificationService().getPrayerNotificationFromDB(key);
         var index = prayerKeys.indexOf(key);
-        if (obj.mosqueUuid != null) {
+        if (check(obj)) {
           final mosque = await getMosque(obj.mosqueUuid!);
 
           var time = getPrayerTime(mosque, key,
@@ -86,12 +97,8 @@ class PrayerService {
     final nextPrayerKey = prayerKeys[index];
     final notificationData = await PrayerNotificationService()
         .getPrayerNotificationFromDB(nextPrayerKey);
-    if (notificationData.notificationSound != 'SILENT') {
-      return notificationData;
-    } else {
-      print('notitifcation is not allowed for the next adhan');
-      return null;
-    }
+
+    return notificationData;
   }
 
   String _getPrayerName(int index) {
@@ -120,16 +127,15 @@ class PrayerService {
 
     var calendar = mosque.calendar;
 
+    var index = prayerKeys.indexOf(key);
 
-var index = prayerKeys.indexOf(key);
-
-    if(index == 6){
+    if (index == 6) {
       var calendar = mosque.imsakCalendar!;
-      
+
       var monthCalendar =
           (calendar[now.month - 1] as Map<String, dynamic>).values.toList();
       var prayerTime = monthCalendar[now.day - 1];
-      
+
       var todayTime = DateTime(
         now.year,
         now.month,
@@ -137,7 +143,6 @@ var index = prayerKeys.indexOf(key);
         int.parse(prayerTime.toString().split(':')[0]),
         int.parse(prayerTime.toString().split(':')[1]),
       );
-  
 
       return todayTime;
     }
@@ -155,7 +160,6 @@ var index = prayerKeys.indexOf(key);
         int.parse(prayerTime.toString().split(':')[0]),
         int.parse(prayerTime.toString().split(':')[1]),
       );
-
 
       return todayTime;
     }

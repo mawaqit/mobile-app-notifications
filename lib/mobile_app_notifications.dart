@@ -178,90 +178,85 @@ class ScheduleAdhan {
 
       String translatedPrayerName = await PrayersName().getPrayerName(index);
       String minutesToAthan = await PrayersName().getStringText();
-      if (Platform.isAndroid) {
-        //for Pre notification
-        var preNotificationTime = prayer.time!
-            .subtract(Duration(minutes: prayer.notificationBeforeAthan));
 
-        if (prayer.notificationBeforeAthan != 0 &&
-            preNotificationTime.isAfter(DateTime.now())) {
-          var id = "1${prayer.alarmId}";
-          newAlarmIds.add(id);
-          try {
-            AndroidAlarmManager.oneShotAt(
-                preNotificationTime, int.parse(id), ringAlarm,
-                alarmClock: true,
-                allowWhileIdle: true,
-                exact: true,
-                wakeup: true,
-                rescheduleOnReboot: true,
-                params: {
-                  'index': index,
-                  'sound': 'mawaqit_id',
-                  'mosque': prayer.mosqueName,
-                  'prayer': translatedPrayerName,
-                  'time': prayer.notificationBeforeAthan.toString(),
-                  'isPreNotification': true,
-                  'minutesToAthan': minutesToAthan,
-                  'notificationBeforeShuruq': 0,
-                });
-            print(
-                'Pre Notification scheduled for ${prayer.prayerName} at : $preNotificationTime Id: $id');
-          } catch (e, t) {
-            print(t);
-            print(e);
-          }
+      //for Pre notification
+      var preNotificationTime = prayer.time!
+          .subtract(Duration(minutes: prayer.notificationBeforeAthan));
+
+      if (prayer.notificationBeforeAthan != 0 &&
+          preNotificationTime.isAfter(DateTime.now())) {
+        var id = "1${prayer.alarmId}";
+        newAlarmIds.add(id);
+        try {
+          AndroidAlarmManager.oneShotAt(
+              preNotificationTime, int.parse(id), ringAlarm,
+              alarmClock: true,
+              allowWhileIdle: true,
+              exact: true,
+              wakeup: true,
+              rescheduleOnReboot: true,
+              params: {
+                'index': index,
+                'sound': 'mawaqit_id',
+                'mosque': prayer.mosqueName,
+                'prayer': translatedPrayerName,
+                'time': prayer.notificationBeforeAthan.toString(),
+                'isPreNotification': true,
+                'minutesToAthan': minutesToAthan,
+                'notificationBeforeShuruq': 0,
+              });
+          print(
+              'Pre Notification scheduled for ${prayer.prayerName} at : $preNotificationTime Id: $id');
+        } catch (e, t) {
+          print(t);
+          print(e);
         }
-        //for Adhan notification
-        String prayerTime = DateFormat('HH:mm').format(prayer.time!);
+      }
+      //for Adhan notification
+      String prayerTime = DateFormat('HH:mm').format(prayer.time!);
+      DateTime notificationTime;
+      int notificationBeforeShuruq;
+      if (index == 1) {
+        notificationBeforeShuruq =
+            prefs.getInt('notificationBeforeShuruq') ?? 0;
+
+        notificationTime =
+            prayer.time!.subtract(Duration(minutes: notificationBeforeShuruq));
+      } else {
+        notificationTime = prayer.time!;
+        notificationBeforeShuruq = 0;
+      }
+      if (prayer.sound != 'SILENT' &&
+          notificationTime.isAfter(DateTime.now())) {
         newAlarmIds.add(prayer.alarmId.toString());
-        DateTime notificationTime;
-        int notificationBeforeShuruq;
-        if (index == 1) {
-          notificationBeforeShuruq =
-              prefs.getInt('notificationBeforeShuruq') ?? 0;
-
-          notificationTime = prayer.time!
-              .subtract(Duration(minutes: notificationBeforeShuruq));
-
-        } else {
-          notificationTime = prayer.time!;
-          notificationBeforeShuruq = 0;
-        }
-
-        if(notificationTime.isBefore(DateTime.now())){
-          try {
-            AndroidAlarmManager.oneShotAt(
-                notificationTime, prayer.alarmId, ringAlarm,
-                alarmClock: true,
-                allowWhileIdle: true,
-                exact: true,
-                wakeup: true,
-                rescheduleOnReboot: true,
-                params: {
-                  'index': index,
-                  'sound': prayer.sound,
-                  'mosque': prayer.mosqueName,
-                  'prayer': translatedPrayerName,
-                  'time': prayerTime,
-                  'isPreNotification': false,
-                  'minutesToAthan': '',
-                  'notificationBeforeShuruq': notificationBeforeShuruq,
-                });
-          } catch (e, t) {
-            print(t);
-            print(e);
-          }
-
+        try {
+          AndroidAlarmManager.oneShotAt(
+              notificationTime, prayer.alarmId, ringAlarm,
+              alarmClock: true,
+              allowWhileIdle: true,
+              exact: true,
+              wakeup: true,
+              rescheduleOnReboot: true,
+              params: {
+                'index': index,
+                'sound': prayer.sound,
+                'mosque': prayer.mosqueName,
+                'prayer': translatedPrayerName,
+                'time': prayerTime,
+                'isPreNotification': false,
+                'minutesToAthan': '',
+                'notificationBeforeShuruq': notificationBeforeShuruq,
+              });
           print(
               'Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
+          await prefs.setStringList('alarmIds', newAlarmIds);
+        } catch (e, t) {
+          print(t);
+          print(e);
         }
-
-
       }
     }
 
-    await prefs.setStringList('alarmIds', newAlarmIds);
     print(newAlarmIds.toList());
   }
 
@@ -323,15 +318,15 @@ class ScheduleAdhan {
           notificationTitle = '$translatedPrayerName $prayerTime';
         }
 
-        if(notificationTime.isBefore(DateTime.now())){
+        if (prayer.sound != 'SILENT' &&
+            notificationTime.isAfter(DateTime.now())) {
           iosNotificationSchedular(prayer.alarmId, notificationTime,
               notificationTitle, prayer.mosqueName, prayer.sound);
+          print(
+              'Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
           j++;
           i++;
         }
-
-
-
       }
     }
   }
