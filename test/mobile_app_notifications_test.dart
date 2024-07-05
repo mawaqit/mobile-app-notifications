@@ -47,6 +47,7 @@ void main() {
         'time': '10',
         'isPreNotification': true,
         'minutesToAthan': '10 minutes',
+        'notificationBeforeShuruq': 0,
       };
 
       when(mockAwesomeNotifications.createNotification(
@@ -76,6 +77,7 @@ void main() {
         'time': '10',
         'isPreNotification': false,
         'minutesToAthan': '10 minutes',
+        'notificationBeforeShuruq': 0,
       };
 
       when(mockAwesomeNotifications.createNotification(

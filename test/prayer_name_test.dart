@@ -27,6 +27,8 @@ void main() {
         switch (index) {
           case 0:
             return 'الفجر';
+          case 1:
+            return 'الشروق';
           case 2:
             return 'الظهر';
           case 3:
@@ -35,16 +37,21 @@ void main() {
             return 'المغرب';
           case 5:
             return 'العشاء';
+          case 6:
+            return 'الإمساك';
           default:
             return 'غير معروف';
         }
       });
 
-      for (int i = 0; i < 6; i++) {
+      for (int i = 0; i < 7; i++) {
         var result = await mockPrayersName.getPrayerName(i);
         switch (i) {
           case 0:
             expect(result, 'الفجر');
+            break;
+          case 1:
+            expect(result, 'الشروق');
             break;
           case 2:
             expect(result, 'الظهر');
@@ -57,6 +64,9 @@ void main() {
             break;
           case 5:
             expect(result, 'العشاء');
+            break;
+          case 6:
+            expect(result, 'الإمساك');
             break;
           default:
             expect(result, 'غير معروف');
@@ -73,6 +83,8 @@ void main() {
         switch (index) {
           case 0:
             return 'ফজর';
+          case 1:
+            return 'শুরুক';
           case 2:
             return 'দুহর';
           case 3:
@@ -81,16 +93,21 @@ void main() {
             return 'মাগরিব';
           case 5:
             return 'ইশা';
+          case 6:
+            return 'ইমসাক';
           default:
             return 'অজানা';
         }
       });
 
-      for (int i = 0; i < 6; i++) {
+      for (int i = 0; i < 7; i++) {
         var result = await mockPrayersName.getPrayerName(i);
         switch (i) {
           case 0:
             expect(result, 'ফজর');
+            break;
+          case 1:
+            expect(result, 'শুরুক');
             break;
           case 2:
             expect(result, 'দুহর');
@@ -103,6 +120,9 @@ void main() {
             break;
           case 5:
             expect(result, 'ইশা');
+            break;
+          case 6:
+            expect(result, 'ইমসাক');
             break;
           default:
             expect(result, 'অজানা');
@@ -117,8 +137,10 @@ void main() {
       when(mockPrayersName.getPrayerName(any)).thenAnswer((invocation) async {
         int index = invocation.positionalArguments[0];
         switch (index) {
-          case 0:
+           case 0:
             return 'Fajr';
+          case 1:
+            return 'Shuruq';
           case 2:
             return 'Duhr';
           case 3:
@@ -127,16 +149,21 @@ void main() {
             return 'Maghrib';
           case 5:
             return 'Isha';
+          case 6:
+            return 'Imsak';
           default:
             return 'Unknown';
         }
       });
 
-      for (int i = 0; i < 6; i++) {
+      for (int i = 0; i < 7; i++) {
         var result = await mockPrayersName.getPrayerName(i);
         switch (i) {
           case 0:
             expect(result, 'Fajr');
+            break;
+          case 1:
+            expect(result, 'Shuruq');
             break;
           case 2:
             expect(result, 'Duhr');
@@ -149,6 +176,9 @@ void main() {
             break;
           case 5:
             expect(result, 'Isha');
+            break;
+          case 6:
+            expect(result, 'Imsak');
             break;
           default:
             expect(result, 'Unknown');
