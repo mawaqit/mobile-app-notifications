@@ -323,8 +323,8 @@ class ScheduleAdhan {
           print(
               'Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
           j++;
-          i++;
         }
+        i++;
       }
     }
   }
