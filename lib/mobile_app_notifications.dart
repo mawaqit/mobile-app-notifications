@@ -86,9 +86,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
     );
 
     ScheduleAdhan scheduleAdhan = ScheduleAdhan();
-    if (!isPreNotification) {
-      scheduleAdhan.schedule();
-    }
+    scheduleAdhan.schedule();
   } catch (e, t) {
     print('an error occurs');
     print(t);
