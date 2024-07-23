@@ -364,6 +364,6 @@ class PrayersName {
 
   Future<String> getLanguage() async {
     final db = await SharedPreferences.getInstance();
-    return db.getString('MAWAQIT_LANGUAGE') ?? '';
+    return db.getString('MAWAQIT_LANGUAGE') ?? 'en';
   }
 }
