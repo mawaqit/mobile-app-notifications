@@ -337,8 +337,8 @@ class ScheduleAdhan {
 
   Future<void> init() async {
     const initializationSettingsIOS = DarwinInitializationSettings(
-      requestSoundPermission: true,
-      requestBadgePermission: true,
+      requestSoundPermission: false,
+      requestBadgePermission: false,
       requestAlertPermission: false,
     );
     const initializationSettings = InitializationSettings(
