@@ -339,7 +339,7 @@ class ScheduleAdhan {
     const initializationSettingsIOS = DarwinInitializationSettings(
       requestSoundPermission: true,
       requestBadgePermission: true,
-      requestAlertPermission: true,
+      requestAlertPermission: false,
     );
     const initializationSettings = InitializationSettings(
       iOS: initializationSettingsIOS,
