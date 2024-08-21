@@ -14,7 +14,7 @@ dependencies:
   awesome_notifications: ^0.8.2
   intl:
   shared_preferences: 2.2.1
-  json_annotation: 4.5.0
+  json_annotation: 4.9.0
   flutter_local_notifications: 17.2.1
   flutter_timezone: 1.0.8
   timezone: 0.9.3
