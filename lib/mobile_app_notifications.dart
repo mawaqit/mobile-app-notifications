@@ -354,6 +354,7 @@ class ScheduleAdhan {
     String? body,
     String? soundId,
   ) async {
+    print('sound id : $soundId');
     try {
       final iOSPlatformChannelSpecifics = DarwinNotificationDetails(
         sound: soundId == 'DEFAULT' ? null : soundId,
