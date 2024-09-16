@@ -296,9 +296,9 @@ class ScheduleAdhan {
 
         if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
           iosNotificationSchedular(prayer.alarmId, notificationTime, notificationTitle, prayer.mosqueName, prayer.sound);
-          iosNotificationSchedular(prayer.alarmId, notificationTime.add(const Duration(seconds: 30)), notificationTitle, prayer.mosqueName, prayer.sound);
-          iosNotificationSchedular(prayer.alarmId, notificationTime.add(const Duration(seconds: 60)), notificationTitle, prayer.mosqueName, prayer.sound);
-          iosNotificationSchedular(prayer.alarmId, notificationTime.add(const Duration(seconds: 90)), notificationTitle, prayer.mosqueName, prayer.sound);
+          iosNotificationSchedular(prayer.alarmId, notificationTime, notificationTitle, prayer.mosqueName, prayer.sound);
+          iosNotificationSchedular(prayer.alarmId, notificationTime, notificationTitle, prayer.mosqueName, prayer.sound);
+          iosNotificationSchedular(prayer.alarmId, notificationTime, notificationTitle, prayer.mosqueName, prayer.sound);
           print('Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
           j++;
         }
