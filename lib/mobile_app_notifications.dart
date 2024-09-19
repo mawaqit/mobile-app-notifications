@@ -310,6 +310,7 @@ class ScheduleAdhan {
               notificationTitle,
               prayer.mosqueName,
               prayer.sound,
+              index: count
             );
             print('Notification $count scheduled for ${prayer.prayerName} at : $scheduledTime Id: ${prayer.alarmId}');
             j++;
@@ -338,13 +339,7 @@ class ScheduleAdhan {
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
-  Future<void> iosNotificationSchedular(
-    int? id,
-    DateTime date,
-    String? title,
-    String? body,
-    String? soundId,
-  ) async {
+  Future<void> iosNotificationSchedular(int? id, DateTime date, String? title, String? body, String? soundId, {int index = -1}) async {
     print('--------------------------------------------------sound id : $soundId --------------------------------------------------');
     try {
       final iOSPlatformChannelSpecifics = DarwinNotificationDetails(
@@ -353,7 +348,7 @@ class ScheduleAdhan {
         presentAlert: true,
         presentBadge: true,
         presentList: false,
-        presentBanner: false,
+        presentBanner: index == -1 || index == 0 ? true : false,
       );
 
       final platformChannelSpecifics = NotificationDetails(
