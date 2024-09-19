@@ -306,7 +306,7 @@ class ScheduleAdhan {
             DateTime scheduledTime = notificationTime.add(Duration(seconds: count * 10));
             // Cancel the previous notification before scheduling the next one
             // if (count > 0) {
-              await flutterLocalNotificationsPlugin.cancel(prayer.alarmId + count);
+            //   await flutterLocalNotificationsPlugin.cancel(prayer.alarmId + count);
             // }
             iosNotificationSchedular(
               prayer.alarmId + count,
@@ -314,6 +314,7 @@ class ScheduleAdhan {
               notificationTitle,
               prayer.mosqueName,
               prayer.sound,
+              
             );
             print('Notification $count scheduled for ${prayer.prayerName} at : $scheduledTime Id: ${prayer.alarmId}');
             j++;
@@ -350,6 +351,7 @@ class ScheduleAdhan {
         presentSound: true,
         presentAlert: true,
         presentBadge: true,
+        presentList: true,
       );
 
       final platformChannelSpecifics = NotificationDetails(
@@ -373,6 +375,7 @@ class ScheduleAdhan {
         platformChannelSpecifics,
         androidScheduleMode: AndroidScheduleMode.alarmClock,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.wallClockTime,
+
       );
     } on Exception catch (e) {
       print('ERROR: $e');
