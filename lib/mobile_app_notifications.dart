@@ -351,7 +351,8 @@ class ScheduleAdhan {
         presentSound: true,
         presentAlert: true,
         presentBadge: true,
-        presentList: true,
+        presentList: false,
+        presentBanner: true,
       );
 
       final platformChannelSpecifics = NotificationDetails(
