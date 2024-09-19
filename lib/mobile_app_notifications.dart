@@ -305,9 +305,9 @@ class ScheduleAdhan {
           for (int count = 0; count < 5; count++) {
             DateTime scheduledTime = notificationTime.add(Duration(seconds: count * 10));
             // Cancel the previous notification before scheduling the next one
-            if (count > 0) {
-              await flutterLocalNotificationsPlugin.cancel(prayer.alarmId + count - 1);
-            }
+            // if (count > 0) {
+              await flutterLocalNotificationsPlugin.cancel(prayer.alarmId + count);
+            // }
             iosNotificationSchedular(
               prayer.alarmId + count,
               scheduledTime,
