@@ -2,11 +2,9 @@
 
 library mobile_app_notifications;
 
-import 'dart:async';
 import 'dart:io';
 
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -315,7 +313,6 @@ class ScheduleAdhan {
               prayer.sound,
             );
             print('Notification $count scheduled for ${prayer.prayerName} at : $scheduledTime Id: ${prayer.alarmId}');
-            playSoundMultipleTimes(prayer.sound);
             j++;
           }
         }
@@ -376,39 +373,6 @@ class ScheduleAdhan {
       );
     } on Exception catch (e) {
       print('ERROR: $e');
-    }
-  }
-
-// Function to play sound 5 times with 10-second intervals
-  void playSoundMultipleTimes(String? soundId) {
-    int repeatCount = 0;
-    Timer.periodic(const Duration(seconds: 10), (Timer timer) {
-      if (repeatCount >= 5) {
-        timer.cancel(); // Stop after 5 repetitions
-      } else {
-        playSound(soundId); // Your function to play sound
-        repeatCount++;
-      }
-    });
-  }
-
-  void playSound(String? soundId) async {
-    final player = AudioPlayer();
-
-    if (soundId != null && soundId != 'DEFAULT') {
-      // Assuming soundId is the path to an asset or a URL
-      String soundPath = 'assets/audios/adhan_abd_albassat_android.mp3'; // Assuming you store sounds in assets
-
-      // Check if the sound exists, then play it
-      try {
-        await player.play(AssetSource(soundPath)); // Play sound from assets
-        print('Playing sound: $soundId');
-      } catch (e) {
-        print('Error playing sound: $e');
-      }
-    } else {
-      // Play a default sound or no sound
-      print('Playing default sound.');
     }
   }
 }
