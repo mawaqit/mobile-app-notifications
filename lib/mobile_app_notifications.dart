@@ -305,24 +305,35 @@ class ScheduleAdhan {
         if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
           for (var element in iosPrayerSoundslist) {
             if (element.prayerName == prayer.sound) {
+              print('------------------------------------------------in If ------------------------------------------------------------------');
               // Schedule 5 notifications with 10-second intervals for Athan notification
               for (int count = 0; count < element.length; count++) {
                 DateTime scheduledTime = notificationTime.add(Duration(seconds: count * 30));
                 // Cancel the previous notification before scheduling the next one
                 // if (count > 0) {
                 //   await flutterLocalNotificationsPlugin.cancel(prayer.alarmId + count);
+                String fileName = prayer.sound ?? 'demo.caf';
+                int number = 0; // Your integer value
+
+                // Split the string to remove the ".caf" extension
+                String baseName = fileName.split('.').first;
+
+                // Add the integer and ".caf" back
+                String newSound = "${baseName}_$number.caf";
                 // }
                 iosNotificationSchedular(
                   prayer.alarmId + count,
                   scheduledTime,
                   notificationTitle,
                   prayer.mosqueName,
-                  '${prayer.sound}_$count',
+                  // '${prayer.sound}_$count',
+                  newSound,
                 );
                 print('Notification $count scheduled for ${prayer.prayerName} at : $scheduledTime Id: ${prayer.alarmId}');
                 j++;
               }
             } else {
+              print('------------------------------------------------in else ------------------------------------------------------------------');
               iosNotificationSchedular(prayer.alarmId, notificationTime, notificationTitle, prayer.mosqueName, prayer.sound);
               print('Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
               j++;
