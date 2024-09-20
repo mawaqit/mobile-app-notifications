@@ -307,7 +307,7 @@ class ScheduleAdhan {
             if (element.prayerName == prayer.sound) {
               print('------------------------------------------------in If ------------------------------------------------------------------');
               // Schedule 5 notifications with 10-second intervals for Athan notification
-              for (int count = 0; count < element.length; count++) {
+              for (int count = 0; count <= element.length; count++) {
                 DateTime scheduledTime = notificationTime.add(Duration(seconds: count * 30));
                 // Cancel the previous notification before scheduling the next one
                 // if (count > 0) {
@@ -333,7 +333,8 @@ class ScheduleAdhan {
               }
             } else {
               print('------------------------------------------------in else ------------------------------------------------------------------');
-              iosNotificationSchedular(prayer.alarmId, notificationTime, notificationTitle, prayer.mosqueName, prayer.sound);
+              iosNotificationSchedular(prayer.alarmId, notificationTime, notificationTitle, prayer.mosqueName, 'adhan_afassy_ios_0.caf');
+              // iosNotificationSchedular(prayer.alarmId, notificationTime, notificationTitle, prayer.mosqueName, prayer.sound);
               print('Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
               j++;
             }
