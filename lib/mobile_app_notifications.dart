@@ -313,13 +313,12 @@ class ScheduleAdhan {
                 // if (count > 0) {
                 //   await flutterLocalNotificationsPlugin.cancel(prayer.alarmId + count);
                 String fileName = prayer.sound ?? 'demo.caf';
-                int number = 0; // Your integer value
 
                 // Split the string to remove the ".caf" extension
                 String baseName = fileName.split('.').first;
 
                 // Add the integer and ".caf" back
-                String newSound = "${baseName}_$number.caf";
+                String newSound = "${baseName}_$count.caf";
                 // }
                 iosNotificationSchedular(
                   prayer.alarmId + count,
