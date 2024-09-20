@@ -22,8 +22,7 @@ class PrayerService {
   bool check(PrayerNotification obj) {
     if (obj.notificationSound == 'SILENT' && obj.notificationBeforeAthan == 0) {
       return false;
-    } else if (obj.notificationSound == null &&
-        obj.notificationBeforeAthan == null) {
+    } else if (obj.notificationSound == null && obj.notificationBeforeAthan == null) {
       return false;
     } else {
       return true;
@@ -34,8 +33,7 @@ class PrayerService {
     List<NotificationInfoModel> prayersList = [];
     var scheduledCount = 0;
     for (var key in prayerKeys) {
-      var obj =
-          await PrayerNotificationService().getPrayerNotificationFromDB(key);
+      var obj = await PrayerNotificationService().getPrayerNotificationFromDB(key);
       if (check(obj)) {
         scheduledCount++;
       }
@@ -49,20 +47,16 @@ class PrayerService {
     while (prayersList.length < (Platform.isIOS ? 70 : 10)) {
       i++;
       for (var key in prayerKeys) {
-        var obj =
-            await PrayerNotificationService().getPrayerNotificationFromDB(key);
+        var obj = await PrayerNotificationService().getPrayerNotificationFromDB(key);
         var index = prayerKeys.indexOf(key);
         if (check(obj)) {
           final mosque = await getMosque(obj.mosqueUuid!);
 
-          var time = getPrayerTime(mosque, key,
-              time: DateTime.now().add(Duration(days: i)));
+          var time = getPrayerTime(mosque, key, time: DateTime.now().add(Duration(days: i)));
           var notificationData = await getPrayerDataByIndex(mosque, index);
           var prayerName = _getPrayerName(index);
 
-          String indexStr = index.toString(),
-              dayStr = time!.day.toString(),
-              monthStr = time.month.toString();
+          String indexStr = index.toString(), dayStr = time!.day.toString(), monthStr = time.month.toString();
           String str = indexStr + dayStr + monthStr;
           int alarmId = int.parse(str);
           print('Alarm ID: $alarmId');
@@ -84,19 +78,15 @@ class PrayerService {
       return element.time!.isBefore(DateTime.now());
     });
     prayersList.sort(
-      (a, b) => a.time!.millisecondsSinceEpoch
-          .toString()
-          .compareTo(b.time!.millisecondsSinceEpoch.toString()),
+      (a, b) => a.time!.millisecondsSinceEpoch.toString().compareTo(b.time!.millisecondsSinceEpoch.toString()),
     );
     prayersList = prayersList.sublist(0, Platform.isIOS ? 63 : 5);
     return prayersList;
   }
 
-  Future<PrayerNotification?> getPrayerDataByIndex(
-      DetailedMosque? mosque, int index) async {
+  Future<PrayerNotification?> getPrayerDataByIndex(DetailedMosque? mosque, int index) async {
     final nextPrayerKey = prayerKeys[index];
-    final notificationData = await PrayerNotificationService()
-        .getPrayerNotificationFromDB(nextPrayerKey);
+    final notificationData = await PrayerNotificationService().getPrayerNotificationFromDB(nextPrayerKey);
 
     return notificationData;
   }
@@ -132,8 +122,7 @@ class PrayerService {
     if (index == 6) {
       var calendar = mosque.imsakCalendar!;
 
-      var monthCalendar =
-          (calendar[now.month - 1] as Map<String, dynamic>).values.toList();
+      var monthCalendar = (calendar[now.month - 1] as Map<String, dynamic>).values.toList();
       var prayerTime = monthCalendar[now.day - 1];
 
       var todayTime = DateTime(
@@ -147,8 +136,7 @@ class PrayerService {
       return todayTime;
     }
     if (calendar != null) {
-      var monthCalendar =
-          (calendar[now.month - 1] as Map<String, dynamic>).values.toList();
+      var monthCalendar = (calendar[now.month - 1] as Map<String, dynamic>).values.toList();
       var todayTimes = monthCalendar[now.day - 1];
 
       var prayerTime = todayTimes[index];
