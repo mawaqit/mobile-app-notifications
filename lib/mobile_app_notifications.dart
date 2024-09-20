@@ -16,6 +16,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tzl;
 import 'package:timezone/timezone.dart' as tz;
 
+import 'models/prayers/ios_prayer_model.dart';
+
 @pragma('vm:entry-point')
 void ringAlarm(int id, Map<String, dynamic> data) async {
   print('from ringAlarm');
@@ -294,32 +296,39 @@ class ScheduleAdhan {
           notificationTitle = '$translatedPrayerName $prayerTime';
         }
 
-        if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
-          iosNotificationSchedular(prayer.alarmId, notificationTime, notificationTitle, prayer.mosqueName, prayer.sound);
-          print('Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
-          j++;
-        }
-
         // if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
-        //   // Schedule 5 notifications with 10-second intervals for Athan notification
-        //   for (int count = 0; count < 5; count++) {
-        //     DateTime scheduledTime = notificationTime.add(Duration(seconds: count * 10));
-        //     // Cancel the previous notification before scheduling the next one
-        //     // if (count > 0) {
-        //     //   await flutterLocalNotificationsPlugin.cancel(prayer.alarmId + count);
-        //     // }
-        //     iosNotificationSchedular(
-        //       prayer.alarmId + count,
-        //       scheduledTime,
-        //       notificationTitle,
-        //       prayer.mosqueName,
-        //       prayer.sound,
-              
-        //     );
-        //     print('Notification $count scheduled for ${prayer.prayerName} at : $scheduledTime Id: ${prayer.alarmId}');
-        //     j++;
-        //   }
+        // iosNotificationSchedular(prayer.alarmId, notificationTime, notificationTitle, prayer.mosqueName, prayer.sound);
+        // print('Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
+        // j++;
         // }
+
+        if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
+          for (var element in iosPrayerSoundslist) {
+            if (element.prayerName == prayer.sound) {
+              // Schedule 5 notifications with 10-second intervals for Athan notification
+              for (int count = 0; count < element.length; count++) {
+                DateTime scheduledTime = notificationTime.add(Duration(seconds: count * 30));
+                // Cancel the previous notification before scheduling the next one
+                // if (count > 0) {
+                //   await flutterLocalNotificationsPlugin.cancel(prayer.alarmId + count);
+                // }
+                iosNotificationSchedular(
+                  prayer.alarmId + count,
+                  scheduledTime,
+                  notificationTitle,
+                  prayer.mosqueName,
+                  '${prayer.sound}_$count',
+                );
+                print('Notification $count scheduled for ${prayer.prayerName} at : $scheduledTime Id: ${prayer.alarmId}');
+                j++;
+              }
+            } else {
+              iosNotificationSchedular(prayer.alarmId, notificationTime, notificationTitle, prayer.mosqueName, prayer.sound);
+              print('Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
+              j++;
+            }
+          }
+        }
         i++;
       }
     }
@@ -376,9 +385,7 @@ class ScheduleAdhan {
         platformChannelSpecifics,
         androidScheduleMode: AndroidScheduleMode.alarmClock,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.wallClockTime,
-
       );
-      
     } on Exception catch (e) {
       print('ERROR: $e');
     }
