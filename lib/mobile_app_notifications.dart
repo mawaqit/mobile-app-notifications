@@ -294,32 +294,32 @@ class ScheduleAdhan {
           notificationTitle = '$translatedPrayerName $prayerTime';
         }
 
-        // if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
-        //   iosNotificationSchedular(prayer.alarmId, notificationTime, notificationTitle, prayer.mosqueName, prayer.sound);
-        //   print('Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
-        //   j++;
-        // }
-
         if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
-          // Schedule 5 notifications with 10-second intervals for Athan notification
-          for (int count = 0; count < 5; count++) {
-            DateTime scheduledTime = notificationTime.add(Duration(seconds: count * 10));
-            // Cancel the previous notification before scheduling the next one
-            // if (count > 0) {
-            //   await flutterLocalNotificationsPlugin.cancel(prayer.alarmId + count);
-            // }
-            iosNotificationSchedular(
-              prayer.alarmId + count,
-              scheduledTime,
-              notificationTitle,
-              prayer.mosqueName,
-              prayer.sound,
-              
-            );
-            print('Notification $count scheduled for ${prayer.prayerName} at : $scheduledTime Id: ${prayer.alarmId}');
-            j++;
-          }
+          iosNotificationSchedular(prayer.alarmId, notificationTime, notificationTitle, prayer.mosqueName, prayer.sound);
+          print('Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
+          j++;
         }
+
+        // if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
+        //   // Schedule 5 notifications with 10-second intervals for Athan notification
+        //   for (int count = 0; count < 5; count++) {
+        //     DateTime scheduledTime = notificationTime.add(Duration(seconds: count * 10));
+        //     // Cancel the previous notification before scheduling the next one
+        //     // if (count > 0) {
+        //     //   await flutterLocalNotificationsPlugin.cancel(prayer.alarmId + count);
+        //     // }
+        //     iosNotificationSchedular(
+        //       prayer.alarmId + count,
+        //       scheduledTime,
+        //       notificationTitle,
+        //       prayer.mosqueName,
+        //       prayer.sound,
+              
+        //     );
+        //     print('Notification $count scheduled for ${prayer.prayerName} at : $scheduledTime Id: ${prayer.alarmId}');
+        //     j++;
+        //   }
+        // }
         i++;
       }
     }
@@ -378,6 +378,7 @@ class ScheduleAdhan {
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.wallClockTime,
 
       );
+      
     } on Exception catch (e) {
       print('ERROR: $e');
     }
