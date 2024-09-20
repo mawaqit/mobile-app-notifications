@@ -6,5 +6,5 @@ class IosPrayerSoundsModel {
 }
 
 var iosPrayerSoundslist = [
-  IosPrayerSoundsModel(length: 5, prayerName: 'adhan_afassy_ios')
+  IosPrayerSoundsModel(length: 5, prayerName: 'adhan_afassy_ios.caf')
 ];
