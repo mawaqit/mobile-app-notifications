@@ -310,7 +310,7 @@ class ScheduleAdhan {
                   print('------------------------------------------------in If ------------------------------------------------------------------');
                   // Schedule 5 notifications with 10-second intervals for Athan notification
                   for (int count = 0; count <= element.length; count++) {
-                    DateTime scheduledTime = DateTime.now();
+                    DateTime scheduledTime = notificationTime;
                     if (count > 0) {
                       scheduledTime = notificationTime.add(Duration(seconds: count * 20));
                     }
@@ -331,8 +331,8 @@ class ScheduleAdhan {
                       scheduledTime,
                       notificationTitle,
                       prayer.mosqueName,
-                      // newSound,
-                      prayer.sound,
+                      newSound,
+                      // prayer.sound,
                     );
                     print('Notification $count scheduled for ${prayer.prayerName} at : $scheduledTime Id: ${prayer.alarmId}');
                     j++;
