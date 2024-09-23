@@ -309,7 +309,10 @@ class ScheduleAdhan {
                 print('------------------------------------------------in If ------------------------------------------------------------------');
                 // Schedule 5 notifications with 10-second intervals for Athan notification
                 for (int count = 0; count <= element.length; count++) {
-                  DateTime scheduledTime = notificationTime.add(Duration(seconds: count * 20));
+                  DateTime scheduledTime = DateTime.now();
+                  if (count > 0) {
+                    scheduledTime = notificationTime.add(Duration(seconds: count * 20));
+                  }
                   // Cancel the previous notification before scheduling the next one
                   // if (count > 0) {
                   //   await flutterLocalNotificationsPlugin.cancel(prayer.alarmId + count);
