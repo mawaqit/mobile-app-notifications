@@ -337,11 +337,6 @@ class ScheduleAdhan {
                     print('Notification $count scheduled for ${prayer.prayerName} at : $scheduledTime Id: ${prayer.alarmId}');
                     j++;
                   }
-                } else {
-                  // print('------------------------------------------------in else ------------------------------------------------------------------');
-                  // iosNotificationSchedular(prayer.alarmId, notificationTime, notificationTitle, prayer.mosqueName, prayer.sound);
-                  // print('Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
-                  // j++;
                 }
               }
             } else {
