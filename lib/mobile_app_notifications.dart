@@ -328,7 +328,7 @@ class ScheduleAdhan {
                     notificationTitle,
                     prayer.mosqueName,
                     // newSound,
-                    'adhan_afassy_ios.caf',
+                    prayer.sound,
                   );
                   print('Notification $count scheduled for ${prayer.prayerName} at : $scheduledTime Id: ${prayer.alarmId}');
                   j++;
@@ -369,7 +369,7 @@ class ScheduleAdhan {
   }
 
   Future<void> iosNotificationSchedular(int? id, DateTime date, String? title, String? body, String? soundId) async {
-    print('--------------------------------------------------sound id : $soundId --------------------------------------------------');
+    print('--------------------------------------------------schedule sound id : $soundId --------------------------------------------------');
     try {
       final iOSPlatformChannelSpecifics = DarwinNotificationDetails(
         sound: soundId == 'DEFAULT' ? null : soundId,
