@@ -309,7 +309,7 @@ class ScheduleAdhan {
                 if (element.prayerName == prayer.sound) {
                   print('------------------------------------------------in If ------------------------------------------------------------------');
                   // Schedule 5 notifications with 10-second intervals for Athan notification
-                  for (int count = 0; count <= element.length; count++) {
+                  for (int count = 0; count < element.length; count++) {
                     DateTime scheduledTime = notificationTime;
                     if (count > 0) {
                       scheduledTime = notificationTime.add(Duration(seconds: count * 20));
