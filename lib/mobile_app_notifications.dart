@@ -349,6 +349,7 @@ class ScheduleAdhan {
 
                     // Update the previous alarm ID
                     previousAlarmId = currentAlarmId;
+                    j++;
                   }
 
                   // Schedule 5 notifications with 10-second intervals for Athan notification
