@@ -307,9 +307,9 @@ class ScheduleAdhan {
                   for (int count = 0; count < element.length; count++) {
                     DateTime scheduledTime = notificationTime;
 
-                    if (count > 0) {
+                    // if (count > 0) {
                       scheduledTime = notificationTime.add(Duration(seconds: count * 20));
-                    }
+                    // }
 
                     String fileName = prayer.sound ?? 'demo.caf';
 
