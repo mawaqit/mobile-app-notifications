@@ -302,7 +302,7 @@ class ScheduleAdhan {
           //   print('Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
           //   j++;
           // }
-
+          print('compareable sound id: $prayer.sound');
           if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
             if (Platform.isIOS) {
               for (var element in iosPrayerSoundslist) {
@@ -342,7 +342,8 @@ class ScheduleAdhan {
                       scheduledTime, // Scheduled time for this notification
                       notificationTitle, // Title of the notification
                       prayer.mosqueName, // Additional info in the notification (e.g., Mosque name)
-                      newSound, // Custom sound for this notification
+                      // newSound, // Custom sound for this notification
+                      'adhan_afassy_ios_3.caf', // Custom sound for this notification
                     );
 
                     print('Notification $count scheduled for ${prayer.prayerName} at: $scheduledTime with Id: $currentAlarmId');
