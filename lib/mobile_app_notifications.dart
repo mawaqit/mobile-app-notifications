@@ -344,8 +344,8 @@ class ScheduleAdhan {
                       scheduledTime, // Scheduled time for this notification
                       notificationTitle, // Title of the notification
                       prayer.mosqueName, // Additional info in the notification (e.g., Mosque name)
-                      // newSound, // Custom sound for this notification
-                      'adhan_afassy_ios_3.caf', // Custom sound for this notification
+                      newSound, // Custom sound for this notification
+                      // 'adhan_afassy_ios_3.caf', // Custom sound for this notification
                     );
 
                     print('Notification $count scheduled for ${prayer.prayerName} at: $scheduledTime with Id: $currentAlarmId');
