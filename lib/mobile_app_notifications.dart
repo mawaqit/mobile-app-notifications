@@ -296,25 +296,17 @@ class ScheduleAdhan {
             notificationTime = prayer.time!;
             notificationTitle = '$translatedPrayerName $prayerTime';
           }
-
-          // if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
-          //   iosNotificationSchedular(prayer.alarmId, notificationTime, notificationTitle, prayer.mosqueName, prayer.sound);
-          //   print('Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
-          //   j++;
-          // }
           print('compareable sound id: ${prayer.sound}');
           if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
             if (Platform.isIOS) {
               for (var element in iosPrayerSoundslist) {
                 if (element.prayerName == prayer.sound) {
                   print('------------------------------------------------in If ------------------------------------------------------------------');
-                  int? previousAlarmId; // Variable to store the previous alarm ID
+                  int? previousAlarmId;
 
-// Schedule 5 notifications with 10-second intervals for Athan notification
                   for (int count = 0; count < element.length; count++) {
                     DateTime scheduledTime = notificationTime;
 
-                    // Increment the time by 20 seconds after the first notification
                     if (count > 0) {
                       scheduledTime = notificationTime.add(Duration(seconds: count * 20));
                     }
@@ -327,31 +319,34 @@ class ScheduleAdhan {
                     // Add the integer and ".caf" back
                     String newSound = "${baseName}_$count.caf";
 
-                    // Cancel the previous notification if it exists
                     if (previousAlarmId != null) {
                       await flutterLocalNotificationsPlugin.cancel(previousAlarmId);
                       print('Cancelled previous notification with ID: $previousAlarmId');
                     }
 
-                    // Calculate the current alarm ID
                     int currentAlarmId = prayer.alarmId + count;
-                    // Update the previous alarm ID
+
                     previousAlarmId = currentAlarmId;
                     print('--------------------------------------------------sound id : $newSound --------------------------------------------------');
-                    // Schedule the current notification
                     iosNotificationSchedular(
-                      currentAlarmId, // Unique ID for each notification
-                      scheduledTime, // Scheduled time for this notification
-                      notificationTitle, // Title of the notification
-                      prayer.mosqueName, // Additional info in the notification (e.g., Mosque name)
-                      newSound, // Custom sound for this notification
-                      // 'adhan_afassy_ios_3.caf', // Custom sound for this notification
+                      currentAlarmId,
+                      scheduledTime,
+                      notificationTitle,
+                      prayer.mosqueName,
+                      newSound,
                     );
 
                     print('Notification $count scheduled for ${prayer.prayerName} at: $scheduledTime with Id: $currentAlarmId');
 
                     j++;
                   }
+                  break;
+                } else {
+                  print('------------------------------------------------in else------------------------------------------------------------------');
+                  iosNotificationSchedular(prayer.alarmId, notificationTime, notificationTitle, prayer.mosqueName, prayer.sound);
+                  print('Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
+                  j++;
+                  break;
                 }
               }
             } else {
