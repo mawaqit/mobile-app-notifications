@@ -302,7 +302,7 @@ class ScheduleAdhan {
           //   print('Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
           //   j++;
           // }
-          print('compareable sound id: $prayer.sound');
+          print('compareable sound id: ${prayer.sound}');
           if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
             if (Platform.isIOS) {
               for (var element in iosPrayerSoundslist) {
@@ -335,7 +335,9 @@ class ScheduleAdhan {
 
                     // Calculate the current alarm ID
                     int currentAlarmId = prayer.alarmId + count;
-
+                    // Update the previous alarm ID
+                    previousAlarmId = currentAlarmId;
+                    print('--------------------------------------------------sound id : $newSound --------------------------------------------------');
                     // Schedule the current notification
                     iosNotificationSchedular(
                       currentAlarmId, // Unique ID for each notification
@@ -348,40 +350,8 @@ class ScheduleAdhan {
 
                     print('Notification $count scheduled for ${prayer.prayerName} at: $scheduledTime with Id: $currentAlarmId');
 
-                    // Update the previous alarm ID
-                    previousAlarmId = currentAlarmId;
                     j++;
                   }
-
-                  // Schedule 5 notifications with 10-second intervals for Athan notification
-                  // for (int count = 0; count < element.length; count++) {
-                  //   DateTime scheduledTime = notificationTime;
-                  //   if (count > 0) {
-                  //     scheduledTime = notificationTime.add(Duration(seconds: count * 20));
-                  //   }
-                  //   // Cancel the previous notification before scheduling the next one
-                  //   // if (count > 0) {
-                  //   //   await flutterLocalNotificationsPlugin.cancel(prayer.alarmId + count);
-                  //   String fileName = prayer.sound ?? 'demo.caf';
-
-                  //   // Split the string to remove the ".caf" extension
-                  //   String baseName = fileName.split('.').first;
-
-                  //   // Add the integer and ".caf" back
-                  //   String newSound = "${baseName}_$count.caf";
-                  //   // }
-                  //   print('--------------------------------------------------sound id : $newSound --------------------------------------------------');
-                  //   iosNotificationSchedular(
-                  //     prayer.alarmId + count,
-                  //     scheduledTime,
-                  //     notificationTitle,
-                  //     prayer.mosqueName,
-                  //     newSound,
-                  //     // prayer.sound,
-                  //   );
-                  //   print('Notification $count scheduled for ${prayer.prayerName} at : $scheduledTime Id: ${prayer.alarmId}');
-                  //   j++;
-                  // }
                 }
               }
             } else {
