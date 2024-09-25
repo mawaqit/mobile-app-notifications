@@ -360,7 +360,7 @@ class ScheduleAdhan {
     await AndroidAlarmManager.initialize();
   }
 
-   Future<void> init() async {
+  Future<void> init() async {
     const initializationSettingsIOS = DarwinInitializationSettings(
       requestSoundPermission: true,
       requestBadgePermission: true,
@@ -369,20 +369,7 @@ class ScheduleAdhan {
     const initializationSettings = InitializationSettings(
       iOS: initializationSettingsIOS,
     );
-    await flutterLocalNotificationsPlugin.initialize(
-      initializationSettings, onDidReceiveNotificationResponse: ScheduleAdhan.handleNotificationResponse, // Static method
-       onDidReceiveBackgroundNotificationResponse: ScheduleAdhan.handleNotificationBackgroundResponse, // Static method
-    );
-  }
-
-  // Static method to handle notification response
-  static Future<void> handleNotificationResponse(NotificationResponse response) async {
-    print('Notification clicked, handling response...');
-  }
-
-  // Static method to handle notification response
-  static Future<void> handleNotificationBackgroundResponse(NotificationResponse response) async {
-    print('Notification clicked, handling response...');
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
   Future<void> iosNotificationSchedular(int? id, DateTime date, String? title, String? body, String? soundId) async {
