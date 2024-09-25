@@ -245,6 +245,8 @@ class ScheduleAdhan {
     print(newAlarmIds.toList());
   }
 
+  List<int> id = [];
+
   scheduleIOS() async {
     try {
       flutterLocalNotificationsPlugin.cancelAll();
@@ -302,7 +304,7 @@ class ScheduleAdhan {
               for (var element in iosPrayerSoundslist) {
                 if (element.prayerName == prayer.sound) {
                   print('------------------------------------------------in If ------------------------------------------------------------------');
-
+                  id = [];
                   for (int count = 0; count < element.length; count++) {
                     DateTime scheduledTime = notificationTime;
 
@@ -317,9 +319,16 @@ class ScheduleAdhan {
                     String newSound = "${baseName}_$count.caf";
 
                     int currentAlarmId = prayer.alarmId + count;
+                    id.add(currentAlarmId);
 
                     print('--------------------------------------------------sound id : $newSound --------------------------------------------------');
-                    iosNotificationSchedular(currentAlarmId, scheduledTime, notificationTitle, prayer.mosqueName, newSound, index: count);
+                    iosNotificationSchedular(
+                      currentAlarmId,
+                      scheduledTime,
+                      notificationTitle,
+                      prayer.mosqueName,
+                      newSound,
+                    );
 
                     print('Notification $count scheduled for ${prayer.prayerName} at: $scheduledTime with Id: $currentAlarmId');
 
@@ -363,7 +372,13 @@ class ScheduleAdhan {
     const initializationSettings = InitializationSettings(
       iOS: initializationSettingsIOS,
     );
-    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings, onDidReceiveBackgroundNotificationResponse: (re) {
+      print(id);
+      print('onDidReceiveBackgroundNotificationResponse:   ${re.id}');
+    }, onDidReceiveNotificationResponse: (res) {
+      print(id);
+      print('onDidReceiveBackgroundNotificationResponse:   ${res.id}');
+    });
   }
 
   Future<void> iosNotificationSchedular(int? id, DateTime date, String? title, String? body, String? soundId, {int index = -1}) async {
@@ -372,11 +387,8 @@ class ScheduleAdhan {
       final iOSPlatformChannelSpecifics = DarwinNotificationDetails(
         sound: soundId == 'DEFAULT' ? null : soundId,
         presentSound: true,
-        // presentAlert: index != -1 && index > 0 ? false : true,
-        // presentBadge: index != -1 && index > 0 ? false : true,
-        presentAlert: false,
-        presentBadge: false,
-        presentBanner: false,
+        presentAlert: true,
+        presentBadge: true,
       );
 
       final platformChannelSpecifics = NotificationDetails(
