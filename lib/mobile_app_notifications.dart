@@ -3,6 +3,7 @@
 library mobile_app_notifications;
 
 import 'dart:io';
+import 'dart:nativewrappers/_internal/vm/lib/ffi_allocation_patch.dart';
 
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
@@ -127,6 +128,8 @@ class ScheduleAdhan {
     'IMSAK_NOTIFICATION',
   ];
 
+  var flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
   Future<bool> checkIOSNotificationPermissions() async {
     final iosPlugin = flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
     final permissionStatus = await iosPlugin?.checkPermissions();
@@ -245,7 +248,6 @@ class ScheduleAdhan {
     print(newAlarmIds.toList());
   }
 
-
   scheduleIOS() async {
     try {
       flutterLocalNotificationsPlugin.cancelAll();
@@ -326,6 +328,10 @@ class ScheduleAdhan {
                       prayer.mosqueName,
                       newSound,
                     );
+                    await Future.delayed(Duration(hours: scheduledTime.hour, minutes: scheduledTime.minute, seconds: 20), () {
+                      print('cancel notification : $currentAlarmId');
+                      flutterLocalNotificationsPlugin.cancel(currentAlarmId);
+                    });
 
                     print('Notification $count scheduled for ${prayer.prayerName} at: $scheduledTime with Id: $currentAlarmId');
 
@@ -358,8 +364,6 @@ class ScheduleAdhan {
     await AndroidAlarmManager.initialize();
   }
 
-  var flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
-
   Future<void> init() async {
     const initializationSettingsIOS = DarwinInitializationSettings(
       requestSoundPermission: true,
@@ -369,11 +373,7 @@ class ScheduleAdhan {
     const initializationSettings = InitializationSettings(
       iOS: initializationSettingsIOS,
     );
-    await flutterLocalNotificationsPlugin.initialize(initializationSettings, onDidReceiveBackgroundNotificationResponse: (re) {
-      print('onDidReceiveBackgroundNotificationResponse 1:   ${re.id ?? ''}');
-    }, onDidReceiveNotificationResponse: (res) {
-      print('onDidReceiveBackgroundNotificationResponse 2:   ${res.id ?? ''}');
-    });
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
   Future<void> iosNotificationSchedular(int? id, DateTime date, String? title, String? body, String? soundId, {int index = -1}) async {
