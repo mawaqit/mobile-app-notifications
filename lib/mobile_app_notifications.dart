@@ -370,9 +370,9 @@ class ScheduleAdhan {
       iOS: initializationSettingsIOS,
     );
     await flutterLocalNotificationsPlugin.initialize(initializationSettings, onDidReceiveBackgroundNotificationResponse: (re) {
-      print('onDidReceiveBackgroundNotificationResponse 1:   ${re.id}');
+      print('onDidReceiveBackgroundNotificationResponse 1:   ${re.id ?? ''}');
     }, onDidReceiveNotificationResponse: (res) {
-      print('onDidReceiveBackgroundNotificationResponse 2:   ${res.id}');
+      print('onDidReceiveBackgroundNotificationResponse 2:   ${res.id ?? ''}');
     });
   }
 
