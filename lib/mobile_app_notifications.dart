@@ -245,7 +245,6 @@ class ScheduleAdhan {
     print(newAlarmIds.toList());
   }
 
-  List<int> id = [];
 
   scheduleIOS() async {
     try {
@@ -304,7 +303,6 @@ class ScheduleAdhan {
               for (var element in iosPrayerSoundslist) {
                 if (element.prayerName == prayer.sound) {
                   print('------------------------------------------------in If ------------------------------------------------------------------');
-                  id = [];
                   for (int count = 0; count < element.length; count++) {
                     DateTime scheduledTime = notificationTime;
 
@@ -319,7 +317,6 @@ class ScheduleAdhan {
                     String newSound = "${baseName}_$count.caf";
 
                     int currentAlarmId = prayer.alarmId + count;
-                    id.add(currentAlarmId);
 
                     print('--------------------------------------------------sound id : $newSound --------------------------------------------------');
                     iosNotificationSchedular(
@@ -373,10 +370,8 @@ class ScheduleAdhan {
       iOS: initializationSettingsIOS,
     );
     await flutterLocalNotificationsPlugin.initialize(initializationSettings, onDidReceiveBackgroundNotificationResponse: (re) {
-      print('1 $id');
       print('onDidReceiveBackgroundNotificationResponse 1:   ${re.id}');
     }, onDidReceiveNotificationResponse: (res) {
-      print('2 $id');
       print('onDidReceiveBackgroundNotificationResponse 2:   ${res.id}');
     });
   }
