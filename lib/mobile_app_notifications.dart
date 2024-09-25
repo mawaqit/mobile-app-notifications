@@ -304,7 +304,6 @@ class ScheduleAdhan {
                   print('------------------------------------------------in If ------------------------------------------------------------------');
 
                   for (int count = 0; count < element.length; count++) {
-               
                     DateTime scheduledTime = notificationTime;
 
                     scheduledTime = notificationTime.add(Duration(seconds: count * 20));
@@ -320,14 +319,7 @@ class ScheduleAdhan {
                     int currentAlarmId = prayer.alarmId + count;
 
                     print('--------------------------------------------------sound id : $newSound --------------------------------------------------');
-                    iosNotificationSchedular(
-                      currentAlarmId,
-                      scheduledTime,
-                      notificationTitle,
-                      prayer.mosqueName,
-                      newSound,
-                      index: count
-                    );
+                    iosNotificationSchedular(currentAlarmId, scheduledTime, notificationTitle, prayer.mosqueName, newSound, index: count);
 
                     print('Notification $count scheduled for ${prayer.prayerName} at: $scheduledTime with Id: $currentAlarmId');
 
@@ -374,14 +366,17 @@ class ScheduleAdhan {
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
-  Future<void> iosNotificationSchedular(int? id, DateTime date, String? title, String? body, String? soundId , {int index = -1}) async {
+  Future<void> iosNotificationSchedular(int? id, DateTime date, String? title, String? body, String? soundId, {int index = -1}) async {
     print('--------------------------------------------------schedule sound id : $soundId --------------------------------------------------');
     try {
       final iOSPlatformChannelSpecifics = DarwinNotificationDetails(
         sound: soundId == 'DEFAULT' ? null : soundId,
         presentSound: true,
-        presentAlert: index != -1 && index > 0 ? false : true,
-        presentBadge: index != -1 && index > 0 ? false : true,
+        // presentAlert: index != -1 && index > 0 ? false : true,
+        // presentBadge: index != -1 && index > 0 ? false : true,
+        presentAlert: true,
+        presentBadge: false,
+        presentBanner: false,
       );
 
       final platformChannelSpecifics = NotificationDetails(
