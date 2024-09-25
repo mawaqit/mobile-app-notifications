@@ -302,13 +302,13 @@ class ScheduleAdhan {
               for (var element in iosPrayerSoundslist) {
                 if (element.prayerName == prayer.sound) {
                   print('------------------------------------------------in If ------------------------------------------------------------------');
-                  int? previousAlarmId;
+                  // int? previousAlarmId;
 
                   for (int count = 0; count < element.length; count++) {
                     DateTime scheduledTime = notificationTime;
 
                     // if (count > 0) {
-                      scheduledTime = notificationTime.add(Duration(seconds: count * 20));
+                    scheduledTime = notificationTime.add(Duration(seconds: count * 20));
                     // }
 
                     String fileName = prayer.sound ?? 'demo.caf';
@@ -319,14 +319,15 @@ class ScheduleAdhan {
                     // Add the integer and ".caf" back
                     String newSound = "${baseName}_$count.caf";
 
-                    if (previousAlarmId != null) {
-                      await flutterLocalNotificationsPlugin.cancel(previousAlarmId);
-                      print('Cancelled previous notification with ID: $previousAlarmId');
+                    if (count > 0) {
+                      await flutterLocalNotificationsPlugin.cancel(count);
+                      print('Cancelled previous notification with ID: $count');
                     }
 
-                    int currentAlarmId = prayer.alarmId + count;
+                    // int currentAlarmId = prayer.alarmId + count;
+                    int currentAlarmId = count;
 
-                    previousAlarmId = currentAlarmId;
+                    // previousAlarmId = currentAlarmId;
                     print('--------------------------------------------------sound id : $newSound --------------------------------------------------');
                     iosNotificationSchedular(
                       currentAlarmId,
