@@ -327,10 +327,10 @@ class ScheduleAdhan {
                     prayer.mosqueName,
                     newSound,
                   );
+                  j++;
 
                   print('Notification $count scheduled for ${prayer.prayerName} at: $scheduledTime with Id: $currentAlarmId');
                 }
-                j++;
               } else {
                 print('------------------------------------------------in else------------------------------------------------------------------');
                 iosNotificationSchedular(prayer.alarmId, notificationTime, notificationTitle, prayer.mosqueName, prayer.sound);
