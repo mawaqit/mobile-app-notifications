@@ -319,13 +319,12 @@ class ScheduleAdhan {
                     // Add the integer and ".caf" back
                     String newSound = "${baseName}_$count.caf";
 
-                    if (count > 0) {
-                      await flutterLocalNotificationsPlugin.cancel(count);
-                      print('Cancelled previous notification with ID: $count');
-                    }
+                    // if (count > 0) {
+                    //   await flutterLocalNotificationsPlugin.cancel(count);
+                    //   print('Cancelled previous notification with ID: $count');
+                    // }
 
-                    // int currentAlarmId = prayer.alarmId + count;
-                    int currentAlarmId = count;
+                    int currentAlarmId = prayer.alarmId + count;
 
                     // previousAlarmId = currentAlarmId;
                     print('--------------------------------------------------sound id : $newSound --------------------------------------------------');
