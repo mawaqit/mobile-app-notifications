@@ -88,6 +88,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
 
     ScheduleAdhan scheduleAdhan = ScheduleAdhan();
     scheduleAdhan.schedule();
+    print('..............................check app life cycle..............................');
   } catch (e, t) {
     print('an error occurs');
     print(t);
