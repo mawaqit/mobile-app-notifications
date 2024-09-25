@@ -301,44 +301,43 @@ class ScheduleAdhan {
           print('compareable sound id: ${prayer.sound}');
           if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
             // if (Platform.isIOS) {
-              for (var element in iosPrayerSoundslist) {
-                if (element.prayerName == prayer.sound) {
-                  print('------------------------------------------------in If ------------------------------------------------------------------');
-                  for (int count = 0; count < element.length; count++) {
-                    DateTime scheduledTime = notificationTime;
+            for (var element in iosPrayerSoundslist) {
+              if (element.prayerName == prayer.sound) {
+                print('------------------------------------------------in If ------------------------------------------------------------------');
+                for (int count = 0; count < element.length; count++) {
+                  DateTime scheduledTime = notificationTime;
 
-                    scheduledTime = notificationTime.add(Duration(seconds: count * 20));
+                  scheduledTime = notificationTime.add(Duration(seconds: count * 20));
 
-                    String fileName = prayer.sound ?? 'demo.caf';
+                  String fileName = prayer.sound ?? 'demo.caf';
 
-                    // Split the string to remove the ".caf" extension
-                    String baseName = fileName.split('.').first;
+                  // Split the string to remove the ".caf" extension
+                  String baseName = fileName.split('.').first;
 
-                    // Add the integer and ".caf" back
-                    String newSound = "${baseName}_$count.caf";
+                  // Add the integer and ".caf" back
+                  String newSound = "${baseName}_$count.caf";
 
-                    int currentAlarmId = prayer.alarmId + count;
+                  int currentAlarmId = prayer.alarmId + count;
 
-                    print('--------------------------------------------------sound id : $newSound --------------------------------------------------');
-                    iosNotificationSchedular(
-                      currentAlarmId,
-                      scheduledTime,
-                      notificationTitle,
-                      prayer.mosqueName,
-                      newSound,
-                    );
+                  print('--------------------------------------------------sound id : $newSound --------------------------------------------------');
+                  iosNotificationSchedular(
+                    currentAlarmId,
+                    scheduledTime,
+                    notificationTitle,
+                    prayer.mosqueName,
+                    newSound,
+                  );
 
-                    print('Notification $count scheduled for ${prayer.prayerName} at: $scheduledTime with Id: $currentAlarmId');
-
-                    j++;
-                  }
-                } else {
-                  print('------------------------------------------------in else------------------------------------------------------------------');
-                  iosNotificationSchedular(prayer.alarmId, notificationTime, notificationTitle, prayer.mosqueName, prayer.sound);
-                  print('Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
-                  j++;
+                  print('Notification $count scheduled for ${prayer.prayerName} at: $scheduledTime with Id: $currentAlarmId');
                 }
+                j++;
+              } else {
+                print('------------------------------------------------in else------------------------------------------------------------------');
+                iosNotificationSchedular(prayer.alarmId, notificationTime, notificationTitle, prayer.mosqueName, prayer.sound);
+                print('Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
+                j++;
               }
+            }
             // } else {
             //   print('------------------------------------------------in else platform------------------------------------------------------------------');
             //   iosNotificationSchedular(prayer.alarmId, notificationTime, notificationTitle, prayer.mosqueName, prayer.sound);
