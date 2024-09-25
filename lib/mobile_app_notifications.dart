@@ -88,7 +88,6 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
 
     ScheduleAdhan scheduleAdhan = ScheduleAdhan();
     scheduleAdhan.schedule();
-    print('..............................check app life cycle..............................');
   } catch (e, t) {
     print('an error occurs');
     print(t);
@@ -301,7 +300,7 @@ class ScheduleAdhan {
           }
           print('compareable sound id: ${prayer.sound}');
           if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
-            if (Platform.isIOS) {
+            // if (Platform.isIOS) {
               for (var element in iosPrayerSoundslist) {
                 if (element.prayerName == prayer.sound) {
                   print('------------------------------------------------in If ------------------------------------------------------------------');
@@ -340,12 +339,12 @@ class ScheduleAdhan {
                   j++;
                 }
               }
-            } else {
-              print('------------------------------------------------in else platform------------------------------------------------------------------');
-              iosNotificationSchedular(prayer.alarmId, notificationTime, notificationTitle, prayer.mosqueName, prayer.sound);
-              print('Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
-              j++;
-            }
+            // } else {
+            //   print('------------------------------------------------in else platform------------------------------------------------------------------');
+            //   iosNotificationSchedular(prayer.alarmId, notificationTime, notificationTitle, prayer.mosqueName, prayer.sound);
+            //   print('Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
+            //   j++;
+            // }
           }
           i++;
         }
