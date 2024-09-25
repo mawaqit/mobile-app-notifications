@@ -306,9 +306,7 @@ class ScheduleAdhan {
                   for (int count = 0; count < element.length; count++) {
                     DateTime scheduledTime = notificationTime;
 
-                    // if (count > 0) {
                     scheduledTime = notificationTime.add(Duration(seconds: count * 20));
-                    // }
 
                     String fileName = prayer.sound ?? 'demo.caf';
 
@@ -377,7 +375,7 @@ class ScheduleAdhan {
   Future<void> iosNotificationSchedular(int? id, DateTime date, String? title, String? body, String? soundId) async {
     print('--------------------------------------------------schedule sound id : $soundId --------------------------------------------------');
     try {
-      // Cancel any existing notification with the same id before scheduling a new one
+      // Cancel the previous notification with the same id before scheduling a new one
       if (id != null) {
         await flutterLocalNotificationsPlugin.cancel(id);
         print('Previous notification with ID: $id has been canceled.');
