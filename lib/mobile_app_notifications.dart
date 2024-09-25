@@ -304,11 +304,7 @@ class ScheduleAdhan {
                   print('------------------------------------------------in If ------------------------------------------------------------------');
 
                   for (int count = 0; count < element.length; count++) {
-                    // Cancel the previous notification with the same id before scheduling a new one
-                    if (count > 0) {
-                      await flutterLocalNotificationsPlugin.cancel((prayer.alarmId + count) - 1);
-                      print('Previous notification with ID: ${(prayer.alarmId + count) - 1} has been canceled.');
-                    }
+               
                     DateTime scheduledTime = notificationTime;
 
                     scheduledTime = notificationTime.add(Duration(seconds: count * 20));
@@ -330,6 +326,7 @@ class ScheduleAdhan {
                       notificationTitle,
                       prayer.mosqueName,
                       newSound,
+                      index: count
                     );
 
                     print('Notification $count scheduled for ${prayer.prayerName} at: $scheduledTime with Id: $currentAlarmId');
@@ -377,14 +374,14 @@ class ScheduleAdhan {
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
-  Future<void> iosNotificationSchedular(int? id, DateTime date, String? title, String? body, String? soundId) async {
+  Future<void> iosNotificationSchedular(int? id, DateTime date, String? title, String? body, String? soundId , {int index = -1}) async {
     print('--------------------------------------------------schedule sound id : $soundId --------------------------------------------------');
     try {
       final iOSPlatformChannelSpecifics = DarwinNotificationDetails(
         sound: soundId == 'DEFAULT' ? null : soundId,
         presentSound: true,
-        presentAlert: true,
-        presentBadge: true,
+        presentAlert: index != -1 && index > 0 ? false : true,
+        presentBadge: index != -1 && index > 0 ? false : true,
       );
 
       final platformChannelSpecifics = NotificationDetails(
