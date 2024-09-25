@@ -374,7 +374,7 @@ class ScheduleAdhan {
         presentSound: true,
         // presentAlert: index != -1 && index > 0 ? false : true,
         // presentBadge: index != -1 && index > 0 ? false : true,
-        presentAlert: true,
+        presentAlert: false,
         presentBadge: false,
         presentBanner: false,
       );
