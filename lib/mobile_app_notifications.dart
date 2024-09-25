@@ -328,10 +328,6 @@ class ScheduleAdhan {
                       prayer.mosqueName,
                       newSound,
                     );
-                    await Future.delayed(Duration(hours: scheduledTime.hour, minutes: scheduledTime.minute, seconds: 20), () {
-                      print('cancel notification : $currentAlarmId');
-                      flutterLocalNotificationsPlugin.cancel(currentAlarmId);
-                    });
 
                     print('Notification $count scheduled for ${prayer.prayerName} at: $scheduledTime with Id: $currentAlarmId');
 
@@ -364,7 +360,7 @@ class ScheduleAdhan {
     await AndroidAlarmManager.initialize();
   }
 
-  Future<void> init() async {
+   Future<void> init() async {
     const initializationSettingsIOS = DarwinInitializationSettings(
       requestSoundPermission: true,
       requestBadgePermission: true,
@@ -373,10 +369,23 @@ class ScheduleAdhan {
     const initializationSettings = InitializationSettings(
       iOS: initializationSettingsIOS,
     );
-    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+    await flutterLocalNotificationsPlugin.initialize(
+      initializationSettings, onDidReceiveNotificationResponse: ScheduleAdhan.handleNotificationResponse, // Static method
+       onDidReceiveBackgroundNotificationResponse: ScheduleAdhan.handleNotificationBackgroundResponse, // Static method
+    );
   }
 
-  Future<void> iosNotificationSchedular(int? id, DateTime date, String? title, String? body, String? soundId, {int index = -1}) async {
+  // Static method to handle notification response
+  static Future<void> handleNotificationResponse(NotificationResponse response) async {
+    print('Notification clicked, handling response...');
+  }
+
+  // Static method to handle notification response
+  static Future<void> handleNotificationBackgroundResponse(NotificationResponse response) async {
+    print('Notification clicked, handling response...');
+  }
+
+  Future<void> iosNotificationSchedular(int? id, DateTime date, String? title, String? body, String? soundId) async {
     print('--------------------------------------------------schedule sound id : $soundId --------------------------------------------------');
     try {
       final iOSPlatformChannelSpecifics = DarwinNotificationDetails(
@@ -412,8 +421,5 @@ class ScheduleAdhan {
       print('ERROR: $e');
       print('stack trace: $s');
     }
-    // on Exception catch (e) {
-    //   print('ERROR: $e');
-    // }
   }
 }
