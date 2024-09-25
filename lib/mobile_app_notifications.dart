@@ -304,6 +304,11 @@ class ScheduleAdhan {
                   print('------------------------------------------------in If ------------------------------------------------------------------');
 
                   for (int count = 0; count < element.length; count++) {
+                    // Cancel the previous notification with the same id before scheduling a new one
+                    if (count > 0) {
+                      await flutterLocalNotificationsPlugin.cancel((prayer.alarmId + count) - 1);
+                      print('Previous notification with ID: ${(prayer.alarmId + count) - 1} has been canceled.');
+                    }
                     DateTime scheduledTime = notificationTime;
 
                     scheduledTime = notificationTime.add(Duration(seconds: count * 20));
@@ -375,11 +380,6 @@ class ScheduleAdhan {
   Future<void> iosNotificationSchedular(int? id, DateTime date, String? title, String? body, String? soundId) async {
     print('--------------------------------------------------schedule sound id : $soundId --------------------------------------------------');
     try {
-      // Cancel the previous notification with the same id before scheduling a new one
-      if (id != null) {
-        await flutterLocalNotificationsPlugin.cancel(id);
-        print('Previous notification with ID: $id has been canceled.');
-      }
       final iOSPlatformChannelSpecifics = DarwinNotificationDetails(
         sound: soundId == 'DEFAULT' ? null : soundId,
         presentSound: true,
