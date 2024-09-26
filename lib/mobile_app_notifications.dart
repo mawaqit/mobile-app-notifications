@@ -249,110 +249,196 @@ class ScheduleAdhan {
 
   scheduleIOS() async {
     try {
-      flutterLocalNotificationsPlugin.cancelAll();
-      print('Cleared previous Notificatoins');
+      // Cancel all previous notifications once
+      await flutterLocalNotificationsPlugin.cancelAll();
+      print('Cleared previous Notifications');
 
+      // Get shared preferences and prayers list
       SharedPreferences prefs = await SharedPreferences.getInstance();
       var prayersList = await PrayerService().getPrayers();
-      int i = 0, j = 0;
-      if (prayersList.isEmpty) {
-        return;
-      } else {
-        while (j < 63) {
-          var prayer = prayersList[i];
-          int index = getPrayerIndex(prayer.prayerName!);
 
-          String translatedPrayerName = await PrayersName().getPrayerName(index);
-          String minutesToAthan = await PrayersName().getStringText();
-          String inText = await PrayersName().getInText();
-          String minutes = await PrayersName().getMinutesText();
+      if (prayersList.isEmpty) return;
 
-          //for pre notification
-          var preNotificationTime = prayer.time!.subtract(Duration(minutes: prayer.notificationBeforeAthan));
-          if (prayer.notificationBeforeAthan != 0 && preNotificationTime.isAfter(DateTime.now())) {
-            String title = '${prayer.notificationBeforeAthan.toString()} $minutesToAthan $translatedPrayerName';
-            iosNotificationSchedular(
-              int.parse(("1${prayer.alarmId}")),
+      int j = 0;
+      int notificationBeforeShuruq = prefs.getInt('notificationBeforeShuruq') ?? 0;
+
+      for (var i = 0; j < 63 && i < prayersList.length; i++) {
+        var prayer = prayersList[i];
+        int index = getPrayerIndex(prayer.prayerName!);
+
+        // Fetch all needed strings once per prayer to avoid multiple async calls
+        String translatedPrayerName = await PrayersName().getPrayerName(index);
+        String minutesToAthan = await PrayersName().getStringText();
+        String inText = await PrayersName().getInText();
+        String minutes = await PrayersName().getMinutesText();
+
+        // Pre-notification scheduling
+        if (prayer.notificationBeforeAthan != 0) {
+          DateTime preNotificationTime = prayer.time!.subtract(Duration(minutes: prayer.notificationBeforeAthan));
+          if (preNotificationTime.isAfter(DateTime.now())) {
+            String title = '${prayer.notificationBeforeAthan} $minutesToAthan $translatedPrayerName';
+            await iosNotificationSchedular(
+              int.parse("1${prayer.alarmId}"),
               preNotificationTime,
               title,
               prayer.mosqueName,
               null,
             );
             print('Pre Notification scheduled for ${prayer.prayerName} at : $preNotificationTime Id: ${1 + prayer.alarmId}');
-
             j++;
           }
+        }
 
-          //for Athan Notification
-          String prayerTime = DateFormat('HH:mm').format(prayer.time!);
-          DateTime notificationTime;
-          String notificationTitle;
-          int notificationBeforeShuruq;
+        // Athan Notification
+        DateTime notificationTime = index == 1 ? prayer.time!.subtract(Duration(minutes: notificationBeforeShuruq)) : prayer.time!;
 
-          if (index == 1) {
-            notificationBeforeShuruq = prefs.getInt('notificationBeforeShuruq') ?? 0;
-            notificationTime = prayer.time!.subtract(Duration(minutes: notificationBeforeShuruq));
-            notificationTitle = '$translatedPrayerName $inText $notificationBeforeShuruq $minutes';
-          } else {
-            notificationBeforeShuruq = 0;
-            notificationTime = prayer.time!;
-            notificationTitle = '$translatedPrayerName $prayerTime';
-          }
-          print('compareable sound id: ${prayer.sound}');
-          if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
-            // if (Platform.isIOS) {
-            for (var element in iosPrayerSoundslist) {
-              if (element.prayerName == prayer.sound) {
-                print('------------------------------------------------in If ------------------------------------------------------------------');
-                for (int count = 0; count < element.length; count++) {
-                  DateTime scheduledTime = notificationTime;
+        String notificationTitle =
+            index == 1 ? '$translatedPrayerName $inText $notificationBeforeShuruq $minutes' : '$translatedPrayerName ${DateFormat('HH:mm').format(prayer.time!)}';
 
-                  scheduledTime = notificationTime.add(Duration(seconds: count * 20));
+        if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
+          int soundIndex = iosPrayerSoundslist.indexWhere((e) => e.prayerName == prayer.sound);
 
-                  String fileName = prayer.sound ?? 'demo.caf';
+          if (soundIndex != -1 && iosPrayerSoundslist[soundIndex].prayerName == prayer.sound) {
+            for (int count = 0; count < iosPrayerSoundslist[soundIndex].length; count++) {
+              DateTime scheduledTime = notificationTime.add(Duration(seconds: count * 20));
 
-                  // Split the string to remove the ".caf" extension
-                  String baseName = fileName.split('.').first;
+              String baseName = (prayer.sound ?? 'demo.caf').split('.').first;
+              String newSound = "${baseName}_$count.caf";
 
-                  // Add the integer and ".caf" back
-                  String newSound = "${baseName}_$count.caf";
+              await iosNotificationSchedular(
+                prayer.alarmId + count,
+                scheduledTime,
+                notificationTitle,
+                prayer.mosqueName,
+                newSound,
+              );
 
-                  int currentAlarmId = prayer.alarmId + count;
-
-                  print('--------------------------------------------------sound id : $newSound --------------------------------------------------');
-                  iosNotificationSchedular(
-                    currentAlarmId,
-                    scheduledTime,
-                    notificationTitle,
-                    prayer.mosqueName,
-                    newSound,
-                  );
-                  j++;
-
-                  print('Notification $count scheduled for ${prayer.prayerName} at: $scheduledTime with Id: $currentAlarmId');
-                }
-              } else {
-                print('------------------------------------------------in else------------------------------------------------------------------');
-                iosNotificationSchedular(prayer.alarmId, notificationTime, notificationTitle, prayer.mosqueName, prayer.sound);
-                print('Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
-                j++;
-              }
+              print('Notification $count scheduled for ${prayer.prayerName} at: $scheduledTime with Id: ${prayer.alarmId + count}');
+              j++;
             }
-            // } else {
-            //   print('------------------------------------------------in else platform------------------------------------------------------------------');
-            //   iosNotificationSchedular(prayer.alarmId, notificationTime, notificationTitle, prayer.mosqueName, prayer.sound);
-            //   print('Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
-            //   j++;
-            // }
+          } else {
+            // Fallback to single notification if no sound matches
+            await iosNotificationSchedular(
+              prayer.alarmId,
+              notificationTime,
+              notificationTitle,
+              prayer.mosqueName,
+              prayer.sound,
+            );
+            print('Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
+            j++;
           }
-          i++;
         }
       }
     } catch (e, s) {
-      print('error at scheduleIOS: $e');
+      print('Error in scheduleIOS: $e');
       print('$s');
     }
   }
+
+  // scheduleIOS() async {
+  //   try {
+  //     flutterLocalNotificationsPlugin.cancelAll();
+  //     print('Cleared previous Notificatoins');
+
+  //     SharedPreferences prefs = await SharedPreferences.getInstance();
+  //     var prayersList = await PrayerService().getPrayers();
+  //     int i = 0, j = 0;
+  //     if (prayersList.isEmpty) {
+  //       return;
+  //     } else {
+  //       while (j < 63) {
+  //         var prayer = prayersList[i];
+  //         int index = getPrayerIndex(prayer.prayerName!);
+
+  //         String translatedPrayerName = await PrayersName().getPrayerName(index);
+  //         String minutesToAthan = await PrayersName().getStringText();
+  //         String inText = await PrayersName().getInText();
+  //         String minutes = await PrayersName().getMinutesText();
+
+  //         //for pre notification
+  //         var preNotificationTime = prayer.time!.subtract(Duration(minutes: prayer.notificationBeforeAthan));
+  //         if (prayer.notificationBeforeAthan != 0 && preNotificationTime.isAfter(DateTime.now())) {
+  //           String title = '${prayer.notificationBeforeAthan.toString()} $minutesToAthan $translatedPrayerName';
+  //           await iosNotificationSchedular(
+  //             int.parse(("1${prayer.alarmId}")),
+  //             preNotificationTime,
+  //             title,
+  //             prayer.mosqueName,
+  //             null,
+  //           );
+  //           print('Pre Notification scheduled for ${prayer.prayerName} at : $preNotificationTime Id: ${1 + prayer.alarmId}');
+
+  //           j++;
+  //         }
+
+  //         //for Athan Notification
+  //         String prayerTime = DateFormat('HH:mm').format(prayer.time!);
+  //         DateTime notificationTime;
+  //         String notificationTitle;
+  //         int notificationBeforeShuruq;
+
+  //         if (index == 1) {
+  //           notificationBeforeShuruq = prefs.getInt('notificationBeforeShuruq') ?? 0;
+  //           notificationTime = prayer.time!.subtract(Duration(minutes: notificationBeforeShuruq));
+  //           notificationTitle = '$translatedPrayerName $inText $notificationBeforeShuruq $minutes';
+  //         } else {
+  //           notificationBeforeShuruq = 0;
+  //           notificationTime = prayer.time!;
+  //           notificationTitle = '$translatedPrayerName $prayerTime';
+  //         }
+  //         print('compareable sound id: ${prayer.sound}');
+  //         if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
+  //           // if (Platform.isIOS) {
+  //           // for (var element in iosPrayerSoundslist) {
+  //           int element = iosPrayerSoundslist.indexWhere((e) => e.prayerName == prayer.sound);
+  //           if (element != -1) {
+  //             if (iosPrayerSoundslist[element].prayerName == prayer.sound) {
+  //               print('------------------------------------------------in If ------------------------------------------------------------------');
+  //               for (int count = 0; count < iosPrayerSoundslist[element].length; count++) {
+  //                 DateTime scheduledTime = notificationTime;
+
+  //                 scheduledTime = notificationTime.add(Duration(seconds: count * 20));
+
+  //                 String fileName = prayer.sound ?? 'demo.caf';
+
+  //                 // Split the string to remove the ".caf" extension
+  //                 String baseName = fileName.split('.').first;
+
+  //                 // Add the integer and ".caf" back
+  //                 String newSound = "${baseName}_$count.caf";
+  //                 await iosNotificationSchedular(
+  //                   prayer.alarmId + count,
+  //                   scheduledTime,
+  //                   notificationTitle,
+  //                   prayer.mosqueName,
+  //                   newSound,
+  //                 );
+  //                 j++;
+
+  //                 print('Notification $count scheduled for ${prayer.prayerName} at: $scheduledTime with Id: ${prayer.alarmId + count}');
+  //               }
+  //             } else {
+  //               print('------------------------------------------------in else------------------------------------------------------------------');
+  //               await iosNotificationSchedular(prayer.alarmId, notificationTime, notificationTitle, prayer.mosqueName, prayer.sound);
+  //               print('Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
+  //               j++;
+  //             }
+  //           } else {
+  //             print('------------------------------------------------in else------------------------------------------------------------------');
+  //             await iosNotificationSchedular(prayer.alarmId, notificationTime, notificationTitle, prayer.mosqueName, prayer.sound);
+  //             print('Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
+  //             j++;
+  //           }
+  //         }
+  //         i++;
+  //       }
+  //     }
+  //   } catch (e, s) {
+  //     print('error at scheduleIOS: $e');
+  //     print('$s');
+  //   }
+  // }
 
   Future<void> initAlarmManager() async {
     await AndroidAlarmManager.initialize();
