@@ -262,7 +262,8 @@ class ScheduleAdhan {
       int j = 0;
       int notificationBeforeShuruq = prefs.getInt('notificationBeforeShuruq') ?? 0;
 
-      for (var i = 0; j < 63 && i < prayersList.length; i++) {
+      // for (var i = 0; j < 63 && i < prayersList.length; i++) {
+      for (var i = 0; j < 70 && i < prayersList.length; i++) {
         var prayer = prayersList[i];
         int index = getPrayerIndex(prayer.prayerName!);
 
