@@ -452,7 +452,7 @@ class ScheduleAdhan {
     List<PendingNotificationRequest> allPendingNotification = await flutterLocalNotificationsPlugin.pendingNotificationRequests();
     print('All scheduling notifications length:  ${allPendingNotification.length}');
     for (var element in allPendingNotification) {
-      print('element length:  ${element.title}');
+      print('element length:  ${element.title} , body: ${element.body}');
     }
   }
 
