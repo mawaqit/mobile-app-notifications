@@ -449,6 +449,8 @@ class ScheduleAdhan {
       print('Error in scheduleIOS: $e');
       print('$s');
     }
+    List<PendingNotificationRequest> allPendingNotification = await flutterLocalNotificationsPlugin.pendingNotificationRequests();
+    print('All scheduling notifications length:  ${allPendingNotification.length}');
   }
 
   Future<void> initAlarmManager() async {
@@ -499,6 +501,7 @@ class ScheduleAdhan {
         androidScheduleMode: AndroidScheduleMode.alarmClock,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.wallClockTime,
       );
+      
     } catch (e, s) {
       print('ERROR: $e');
       print('stack trace: $s');
