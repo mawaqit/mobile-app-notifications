@@ -403,41 +403,41 @@ class ScheduleAdhan {
           }
 
           // Check for sound in iosPrayerSoundslist
-          int element = iosPrayerSoundslist.indexWhere((e) => e.prayerName == prayer.sound);
-          if (element != -1) {
-            // Schedule multiple notifications based on sound length
-            print('Scheduling multiple notifications for: ${prayer.sound}');
-            for (int count = 0; count < iosPrayerSoundslist[element].length; count++) {
-              DateTime scheduledTime = notificationTime.add(Duration(seconds: count * 20)); // Ensure unique scheduled time
+          // int element = iosPrayerSoundslist.indexWhere((e) => e.prayerName == prayer.sound);
+          // if (element != -1) {
+          //   // Schedule multiple notifications based on sound length
+          //   print('Scheduling multiple notifications for: ${prayer.sound}');
+          //   for (int count = 0; count < iosPrayerSoundslist[element].length; count++) {
+          //     DateTime scheduledTime = notificationTime.add(Duration(seconds: count * 20)); // Ensure unique scheduled time
 
-              String fileName = prayer.sound ?? 'demo.caf';
-              String baseName = fileName.split('.').first;
-              String newSound = "${baseName}_$count.caf";
+          //     String fileName = prayer.sound ?? 'demo.caf';
+          //     String baseName = fileName.split('.').first;
+          //     String newSound = "${baseName}_$count.caf";
 
-              await iosNotificationSchedular(
-                prayer.alarmId + count,
-                scheduledTime,
-                notificationTitle,
-                prayer.mosqueName,
-                newSound,
-              );
-              j++;
-              print('Notification $count scheduled for ${prayer.prayerName} at: $scheduledTime with Id: ${prayer.alarmId + count}');
-            }
-          } else {
-            // Schedule single notification if sound is silent
-            if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
-              print('Scheduling default notification for: ${prayer.prayerName}');
-              await iosNotificationSchedular(
-                prayer.alarmId,
-                notificationTime,
-                notificationTitle,
-                prayer.mosqueName,
-                prayer.sound,
-              );
-              print('Notification scheduled for ${prayer.prayerName} at: $notificationTime with Id: ${prayer.alarmId}');
-              j++;
-            }
+          //     await iosNotificationSchedular(
+          //       prayer.alarmId + count,
+          //       scheduledTime,
+          //       notificationTitle,
+          //       prayer.mosqueName,
+          //       newSound,
+          //     );
+          //     j++;
+          //     print('Notification $count scheduled for ${prayer.prayerName} at: $scheduledTime with Id: ${prayer.alarmId + count}');
+          //   }
+          // } else {
+          // Schedule single notification if sound is silent
+          if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
+            print('Scheduling default notification for: ${prayer.prayerName}');
+            await iosNotificationSchedular(
+              prayer.alarmId,
+              notificationTime,
+              notificationTitle,
+              prayer.mosqueName,
+              prayer.sound,
+            );
+            print('Notification scheduled for ${prayer.prayerName} at: $notificationTime with Id: ${prayer.alarmId}');
+            j++;
+            // }
           }
 
           // Move to the next prayer
@@ -502,7 +502,7 @@ class ScheduleAdhan {
         scheduledDate,
         platformChannelSpecifics,
         androidScheduleMode: AndroidScheduleMode.alarmClock,
-        payload:scheduledDate.toString() ,
+        payload: scheduledDate.toString(),
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.wallClockTime,
       );
     } catch (e, s) {
