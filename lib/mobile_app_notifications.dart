@@ -454,7 +454,7 @@ class ScheduleAdhan {
     for (var element in allPendingNotification) {
       
       print('element length:  ${element.title} , body: ${element.payload}');
-      print('\n\n------------------------------------------------------------------------------------------------------');
+      print('------------------------------------------------------------------------------------------------------');
     }
   }
 
@@ -504,7 +504,7 @@ class ScheduleAdhan {
         scheduledDate,
         platformChannelSpecifics,
         androidScheduleMode: AndroidScheduleMode.alarmClock,
-        payload: scheduledDate.toString(),
+        payload: 'scheudle date: $scheduledDate , sound id: $soundId',
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.wallClockTime,
       );
     } catch (e, s) {
