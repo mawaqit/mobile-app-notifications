@@ -252,6 +252,9 @@ class ScheduleAdhan {
       await AwesomeNotifications().cancelAll();
       print('Cleared previous Notifications');
 
+      await AwesomeNotifications().setListeners(onActionReceivedMethod: (receivedAction) async {
+        print('-------------------------------- notification received --------------------------------');
+      });
       // Retrieve SharedPreferences and prayers list
       SharedPreferences prefs = await SharedPreferences.getInstance();
       var prayersList = await PrayerService().getPrayers();
