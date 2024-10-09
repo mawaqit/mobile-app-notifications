@@ -12,7 +12,6 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_app_notifications/models/prayers/prayer_name.dart';
 import 'package:mobile_app_notifications/prayer_services.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tzl;
 import 'package:timezone/timezone.dart' as tz;
@@ -499,9 +498,7 @@ class ScheduleAdhan {
         payload: 'scheudle date: $scheduledDate , sound id: $soundId',
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.wallClockTime,
       );
-      await Sentry.captureMessage('id: $id , title: $title , body: $body , scheduledDate: $scheduledDate , sound id: $soundId');
     } catch (e, s) {
-      Sentry.captureException('error at iosNotificationSchedular:  $e', hint: Hint.withMap({'iosNotificationSchedular_issue': '$e'}), stackTrace: s);
       print('ERROR: $e');
       print('stack trace: $s');
     }
