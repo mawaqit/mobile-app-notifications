@@ -168,7 +168,7 @@ class ScheduleAdhan {
 
     for (var i = 0; i < prayersList.length; i++) {
       var prayer = prayersList[i];
-      int index = getPrayerIndex(prayer.prayerName!);
+      int index = getPrayerIndex(prayer.prayerName ?? '');
 
       String translatedPrayerName = await PrayersName().getPrayerName(index);
       String minutesToAthan = await PrayersName().getStringText();
