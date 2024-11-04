@@ -50,7 +50,7 @@ class PrayerService {
         var obj = await PrayerNotificationService().getPrayerNotificationFromDB(key);
         var index = prayerKeys.indexOf(key);
         if (check(obj)) {
-          final mosque = await getMosque(obj.mosqueUuid!);
+          final mosque = await getMosque(obj.mosqueUuid ?? '');
 
           var time = getPrayerTime(mosque, key, time: DateTime.now().add(Duration(days: i)));
           var notificationData = await getPrayerDataByIndex(mosque, index);
