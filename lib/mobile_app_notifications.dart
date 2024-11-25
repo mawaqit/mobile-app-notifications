@@ -63,7 +63,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
         ledColor: Colors.white,
         playSound: true,
         soundSource: isPreNotification ? null : adhanSound,
-        enableVibration: false,
+        enableVibration: true,
         icon: 'resource://drawable/logo',
         onlyAlertOnce: true,
         criticalAlerts: true,
