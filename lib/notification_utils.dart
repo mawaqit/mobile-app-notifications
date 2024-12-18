@@ -3,40 +3,43 @@ import 'package:flutter/material.dart';
 
 class NotificationUtils {
   static Future<void> initializeNotificationChannels() async {
-    try {
-      AwesomeNotifications().initialize(
-        'resource://drawable/logo', // Icon for notifications
-        [
-          NotificationChannel(
-            channelKey: 'pre_notif',
-            channelName: 'Pre-Notification Channel',
-            channelDescription: 'Notifications before prayer times',
-            importance: NotificationImportance.High,
-            defaultColor: const Color(0xFF9D50DD),
-            ledColor: Colors.white,
-            playSound: true,
-            enableVibration: true,
-            criticalAlerts: true,
-            onlyAlertOnce: true,
-          ),
-          NotificationChannel(
-            channelKey: 'DEFAULT',
-            channelName: 'Default Channel',
-            channelDescription: 'Adhan and other prayer notifications',
-            importance: NotificationImportance.Max,
-            defaultColor: const Color(0xFF9D50DD),
-            ledColor: Colors.white,
-            playSound: true,
-            enableVibration: true,
-            criticalAlerts: true,
-            soundSource: 'resource://raw/default_adhan',
-            onlyAlertOnce: true,
-          ),
-        ],
-      );
-      print("Notification channels initialized successfully.");
-    } catch (e) {
-      print("Error initializing notification channels: $e");
-    }
+    await AwesomeNotifications().initialize(
+      'resource://drawable/logo', // App icon
+      [
+        NotificationChannel(
+          channelKey: 'default_channel',
+          channelName: 'Default Notifications',
+          channelDescription: 'Notifications with default sound',
+          importance: NotificationImportance.Max,
+          defaultColor: const Color(0xFF9D50DD),
+          ledColor: Colors.white,
+          playSound: true,
+          enableVibration: true,
+          onlyAlertOnce: true,
+        ),
+        NotificationChannel(
+          channelKey: 'silent_channel',
+          channelName: 'Silent Notifications',
+          channelDescription: 'Notifications with no sound',
+          importance: NotificationImportance.Max,
+          defaultColor: const Color(0xFF9D50DD),
+          ledColor: Colors.white,
+          playSound: false, // No sound for silent notifications
+          enableVibration: true,
+          onlyAlertOnce: true,
+        ),
+        NotificationChannel(
+          channelKey: 'adhan_channel',
+          channelName: 'Adhan Notifications',
+          channelDescription: 'Notifications with dynamic adhan sounds',
+          importance: NotificationImportance.Max,
+          defaultColor: const Color(0xFF9D50DD),
+          ledColor: Colors.white,
+          playSound: true,
+          enableVibration: true,
+          onlyAlertOnce: true,
+        ),
+      ],
+    );
   }
 }
