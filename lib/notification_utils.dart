@@ -24,14 +24,14 @@ class NotificationUtils {
           importance: NotificationImportance.Max,
           defaultColor: const Color(0xFF9D50DD),
           ledColor: Colors.white,
-          playSound: false, // No sound for silent notifications
+          playSound: false, // No sound
           enableVibration: true,
           onlyAlertOnce: true,
         ),
         NotificationChannel(
           channelKey: 'adhan_channel',
           channelName: 'Adhan Notifications',
-          channelDescription: 'Notifications with dynamic adhan sounds',
+          channelDescription: 'Notifications with adhan sounds',
           importance: NotificationImportance.Max,
           defaultColor: const Color(0xFF9D50DD),
           ledColor: Colors.white,
@@ -39,7 +39,19 @@ class NotificationUtils {
           enableVibration: true,
           onlyAlertOnce: true,
         ),
+        NotificationChannel(
+          channelKey: 'pre_notification_channel',
+          channelName: 'Pre-Notification Channel',
+          channelDescription: 'Notifications sent before an event or prayer time',
+          importance: NotificationImportance.Max,
+          defaultColor: const Color(0xFF9D50DD),
+          ledColor: Colors.white,
+          playSound: true, // Optional sound for pre-notifications
+          enableVibration: true,
+          onlyAlertOnce: true,
+        ),
       ],
     );
   }
+
 }

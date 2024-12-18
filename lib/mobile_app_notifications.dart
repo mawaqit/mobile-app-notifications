@@ -19,6 +19,7 @@ import 'package:timezone/timezone.dart' as tz;
 @pragma('vm:entry-point')
 void ringAlarm(int id, Map<String, dynamic> data) async {
   print('from ringAlarm');
+
   int index = data['index'];
   String sound = data['sound'];
   String mosque = data['mosque'];
@@ -33,10 +34,11 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
   String? dynamicSoundSource;
 
   try {
+    // Determine notification type
     if (isPreNotification) {
-      print('for pre notification');
+      print('for pre-notification');
       notificationTitle = '$time $minutesToAthan $prayer';
-      channelKey = 'silent_channel';
+      channelKey = 'pre_notification_channel'; // Predefined channel with system sound
     } else {
       print('for adhan notification');
       if (notificationBeforeShuruq != 0) {
@@ -48,11 +50,11 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       }
 
       if (sound == 'DEFAULT') {
-        channelKey = 'default_channel';
+        channelKey = 'default_channel'; // Predefined default system sound
       } else if (sound == 'SILENT') {
-        channelKey = 'silent_channel';
+        channelKey = 'silent_channel'; // Predefined silent channel
       } else {
-        // Use a dynamic sound source
+        // Dynamically handle adhan sounds
         channelKey = 'adhan_channel_${sound.hashCode}';
         dynamicSoundSource = 'resource://raw/${sound.substring(0, sound.length - 4)}';
 
@@ -90,6 +92,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       ),
     );
 
+    // Schedule the next prayer notification if necessary
     ScheduleAdhan scheduleAdhan = ScheduleAdhan();
     scheduleAdhan.schedule();
   } catch (e, t) {
@@ -98,6 +101,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
     print(e);
   }
 }
+
 
 class ScheduleAdhan {
   int getPrayerIndex(String prayer) {
