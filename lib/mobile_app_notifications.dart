@@ -39,10 +39,8 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       if (notificationBeforeShuruq != 0) {
         String inText = await PrayersName().getInText();
         String minutes = await PrayersName().getMinutesText();
-        print('notificationBeforeShuruq : $notificationBeforeShuruq');
         notificationTitle = '$prayer $inText $notificationBeforeShuruq $minutes';
       } else {
-        print('notificationBeforeShuruq : $notificationBeforeShuruq');
         notificationTitle = '$prayer  $time';
       }
 
@@ -53,23 +51,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       }
     }
     print('adhan sound: $adhanSound');
-    AwesomeNotifications().initialize('resource://drawable/logo', [
-      NotificationChannel(
-        channelKey: isPreNotification ? 'pre_notif' : adhanSound ?? 'DEFAULT',
-        channelName: 'mawaqit',
-        channelDescription: 'mawaqit_channel',
-        importance: NotificationImportance.Max,
-        defaultColor: const Color(0xFF9D50DD),
-        ledColor: Colors.white,
-        playSound: true,
-        soundSource: isPreNotification ? null : adhanSound,
-        enableVibration: true,
-        icon: 'resource://drawable/logo',
-        onlyAlertOnce: true,
-        criticalAlerts: true,
-        defaultRingtoneType: DefaultRingtoneType.Notification,
-      )
-    ]);
+
     await AwesomeNotifications().createNotification(
       content: NotificationContent(
         id: id,
@@ -87,7 +69,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
     ScheduleAdhan scheduleAdhan = ScheduleAdhan();
     scheduleAdhan.schedule();
   } catch (e, t) {
-    print('an error occurs');
+    print('An error occurred in ringAlarm');
     print(t);
     print(e);
   }
