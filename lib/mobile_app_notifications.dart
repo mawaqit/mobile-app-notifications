@@ -38,7 +38,8 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
     if (isPreNotification) {
       print('for pre-notification');
       notificationTitle = '$time $minutesToAthan $prayer';
-      channelKey = 'pre_notification_channel'; // Predefined channel with system sound
+      channelKey = 'pre_notification_channel';
+      dynamicSoundSource=null;
     } else {
       print('for adhan notification');
       if (notificationBeforeShuruq != 0) {
