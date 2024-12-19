@@ -49,7 +49,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       } else {
         notificationTitle = '$prayer  $time';
       }
-
+print('anas----------------------------- $sound');
       if (sound == 'DEFAULT') {
         channelKey = 'default_channel'; // Predefined default system sound
       } else if (sound == 'SILENT') {
