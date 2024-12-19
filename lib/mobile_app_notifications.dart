@@ -34,14 +34,29 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
   String? dynamicSoundSource;
 
   try {
-    // Determine notification type
+    // Determine the channel and reset it
     if (isPreNotification) {
+      // Pre-notification logic
       print('for pre-notification');
       notificationTitle = '$time $minutesToAthan $prayer';
       channelKey = 'pre_notification_channel';
-      dynamicSoundSource=null;
+
+      // Remove and recreate pre-notification channel
+      await AwesomeNotifications().removeChannel(channelKey);
+      await AwesomeNotifications().setChannel(NotificationChannel(
+        channelKey: channelKey,
+        channelName: 'Pre-Notification Channel',
+        channelDescription: 'Notifications sent before an event or prayer time',
+        importance: NotificationImportance.Max,
+        defaultColor: const Color(0xFF9D50DD),
+        ledColor: Colors.white,
+        playSound: true, // System sound for pre-notifications
+        enableVibration: true,
+        onlyAlertOnce: true,
+      ));
     } else {
-      print('for adhan notification');
+      // Main notification logic
+      print('for main notification');
       if (notificationBeforeShuruq != 0) {
         String inText = await PrayersName().getInText();
         String minutes = await PrayersName().getMinutesText();
@@ -49,17 +64,32 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       } else {
         notificationTitle = '$prayer  $time';
       }
-print('anas----------------------------- $sound');
+
       if (sound == 'DEFAULT') {
-        channelKey = 'default_channel'; // Predefined default system sound
+        channelKey = 'default_channel';
       } else if (sound == 'SILENT') {
-        channelKey = 'silent_channel'; // Predefined silent channel
+        channelKey = 'silent_channel';
+
+        // Remove and recreate silent channel
+        await AwesomeNotifications().removeChannel(channelKey);
+        await AwesomeNotifications().setChannel(NotificationChannel(
+          channelKey: channelKey,
+          channelName: 'Silent Notifications',
+          channelDescription: 'Notifications with no sound',
+          importance: NotificationImportance.Max,
+          defaultColor: const Color(0xFF9D50DD),
+          ledColor: Colors.white,
+          playSound: false, // No sound
+          enableVibration: true,
+          onlyAlertOnce: true,
+        ));
       } else {
-        // Dynamically handle adhan sounds
+        // Adhan sound logic
         channelKey = 'adhan_channel_${sound.hashCode}';
         dynamicSoundSource = 'resource://raw/${sound.substring(0, sound.length - 4)}';
 
-        // Dynamically create or override the channel
+        // Remove and recreate adhan channel
+        await AwesomeNotifications().removeChannel(channelKey);
         await AwesomeNotifications().setChannel(NotificationChannel(
           channelKey: channelKey,
           channelName: 'Dynamic Adhan Notification',
@@ -102,6 +132,7 @@ print('anas----------------------------- $sound');
     print(e);
   }
 }
+
 
 
 class ScheduleAdhan {

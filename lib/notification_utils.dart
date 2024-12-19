@@ -21,7 +21,7 @@ class NotificationUtils {
           channelKey: 'silent_channel',
           channelName: 'Silent Notifications',
           channelDescription: 'Notifications with no sound',
-          importance: NotificationImportance.Max,
+          importance: NotificationImportance.Min,
           defaultColor: const Color(0xFF9D50DD),
           ledColor: Colors.white,
           playSound: false, // No sound
@@ -43,7 +43,7 @@ class NotificationUtils {
           channelKey: 'pre_notification_channel',
           channelName: 'Pre-Notification Channel',
           channelDescription: 'Notifications sent before an event or prayer time',
-          importance: NotificationImportance.Max,
+          importance: NotificationImportance.Min,
           defaultColor: const Color(0xFF9D50DD),
           ledColor: Colors.white,
           playSound: true, // Optional sound for pre-notifications
