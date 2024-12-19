@@ -34,27 +34,13 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
   String? dynamicSoundSource;
 
   try {
+    // Determine notification type
     if (isPreNotification) {
-      // Pre-notification: Always use pre_notification_channel
       print('for pre-notification');
       notificationTitle = '$time $minutesToAthan $prayer';
-      channelKey = 'pre_notification_channel';
-
-      // Ensure pre-notification uses the predefined channel with system sound
-      await AwesomeNotifications().setChannel(NotificationChannel(
-        channelKey: 'pre_notification_channel',
-        channelName: 'Pre-Notification Channel',
-        channelDescription: 'Notifications sent before an event or prayer time',
-        importance: NotificationImportance.Max,
-        defaultColor: const Color(0xFF9D50DD),
-        ledColor: Colors.white,
-        playSound: true, // Optional sound for pre-notifications
-        enableVibration: true,
-        onlyAlertOnce: true,
-      ));
+      channelKey = 'pre_notification_channel'; // Predefined channel with system sound
     } else {
-      // Main notification: Handle adhan, silent, or default
-      print('for main notification');
+      print('for adhan notification');
       if (notificationBeforeShuruq != 0) {
         String inText = await PrayersName().getInText();
         String minutes = await PrayersName().getMinutesText();
@@ -64,26 +50,15 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       }
 
       if (sound == 'DEFAULT') {
-        channelKey = 'default_channel';
+        channelKey = 'default_channel'; // Predefined default system sound
       } else if (sound == 'SILENT') {
-        channelKey = 'silent_channel';
-        await AwesomeNotifications().setChannel(NotificationChannel(
-          channelKey: 'silent_channel',
-          channelName: 'Silent Notifications',
-          channelDescription: 'Notifications with no sound',
-          importance: NotificationImportance.Max,
-          defaultColor: const Color(0xFF9D50DD),
-          ledColor: Colors.white,
-          playSound: false, // No sound
-          enableVibration: true,
-          onlyAlertOnce: true,
-        ));
+        channelKey = 'silent_channel'; // Predefined silent channel
       } else {
-        // Adhan notifications: Dynamic sound handling
+        // Dynamically handle adhan sounds
         channelKey = 'adhan_channel_${sound.hashCode}';
         dynamicSoundSource = 'resource://raw/${sound.substring(0, sound.length - 4)}';
 
-        // Dynamically create or override the adhan channel
+        // Dynamically create or override the channel
         await AwesomeNotifications().setChannel(NotificationChannel(
           channelKey: channelKey,
           channelName: 'Dynamic Adhan Notification',
@@ -126,7 +101,6 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
     print(e);
   }
 }
-
 
 
 class ScheduleAdhan {
