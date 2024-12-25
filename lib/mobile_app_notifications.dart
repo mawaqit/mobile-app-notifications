@@ -50,8 +50,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
         importance: NotificationImportance.Max,
         defaultColor: const Color(0xFF9D50DD),
         ledColor: Colors.white,
-        playSound: true,
-        // System sound for pre-notifications
+        playSound: true, // System sound for pre-notifications
         enableVibration: true,
         onlyAlertOnce: true,
       ));
@@ -61,8 +60,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       if (notificationBeforeShuruq != 0) {
         String inText = await PrayersName().getInText();
         String minutes = await PrayersName().getMinutesText();
-        notificationTitle =
-            '$prayer $inText $notificationBeforeShuruq $minutes';
+        notificationTitle = '$prayer $inText $notificationBeforeShuruq $minutes';
       } else {
         notificationTitle = '$prayer  $time';
       }
@@ -81,16 +79,14 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
           importance: NotificationImportance.Max,
           defaultColor: const Color(0xFF9D50DD),
           ledColor: Colors.white,
-          playSound: false,
-          // No sound
+          playSound: false, // No sound
           enableVibration: true,
           onlyAlertOnce: true,
         ));
       } else {
         // Adhan sound logic
         channelKey = 'adhan_channel_${sound.hashCode}';
-        dynamicSoundSource =
-            'resource://raw/${sound.substring(0, sound.length - 4)}';
+        dynamicSoundSource = 'resource://raw/${sound.substring(0, sound.length - 4)}';
 
         // Remove and recreate adhan channel
         await AwesomeNotifications().removeChannel(channelKey);
@@ -136,6 +132,8 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
     print(e);
   }
 }
+
+
 
 class ScheduleAdhan {
   int getPrayerIndex(String prayer) {
@@ -212,8 +210,8 @@ class ScheduleAdhan {
     await prefs.setStringList('alarmIds', []);
 
     var prayersList = await PrayerService().getPrayers();
+
     List<String> newAlarmIds = [];
-    Set<DateTime> scheduledTimes = {};
 
     for (var i = 0; i < prayersList.length; i++) {
       var prayer = prayersList[i];
@@ -227,13 +225,11 @@ class ScheduleAdhan {
           .subtract(Duration(minutes: prayer.notificationBeforeAthan));
 
       if (prayer.notificationBeforeAthan != 0 &&
-          preNotificationTime.isAfter(DateTime.now()) &&
-          !scheduledTimes.contains(preNotificationTime)) {
+          preNotificationTime.isAfter(DateTime.now())) {
         var id = "1${prayer.alarmId}";
         newAlarmIds.add(id);
-        scheduledTimes.add(preNotificationTime); // Mark as scheduled
         try {
-          await AndroidAlarmManager.oneShotAt(
+          AndroidAlarmManager.oneShotAt(
               preNotificationTime, int.parse(id), ringAlarm,
               alarmClock: true,
               allowWhileIdle: true,
@@ -272,12 +268,10 @@ class ScheduleAdhan {
         notificationBeforeShuruq = 0;
       }
       if (prayer.sound != 'SILENT' &&
-          notificationTime.isAfter(DateTime.now()) &&
-          !scheduledTimes.contains(notificationTime)) {
+          notificationTime.isAfter(DateTime.now())) {
         newAlarmIds.add(prayer.alarmId.toString());
-        scheduledTimes.add(notificationTime); // Mark as scheduled
         try {
-          await AndroidAlarmManager.oneShotAt(
+          AndroidAlarmManager.oneShotAt(
               notificationTime, prayer.alarmId, ringAlarm,
               alarmClock: true,
               allowWhileIdle: true,
@@ -296,6 +290,7 @@ class ScheduleAdhan {
               });
           print(
               'Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
+          await prefs.setStringList('alarmIds', newAlarmIds);
         } catch (e, t) {
           print(t);
           print(e);
@@ -303,8 +298,6 @@ class ScheduleAdhan {
       }
     }
 
-    // Update alarm IDs in shared preferences
-    await prefs.setStringList('alarmIds', newAlarmIds);
     print(newAlarmIds.toList());
   }
 
