@@ -38,7 +38,6 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
     if (isPreNotification) {
       print('for pre notification');
       notificationTitle = '$time $minutesToAthan $prayer';
-      print('notificationTitle : $notificationTitle');
     } else {
       print('for adhan notification');
       if (notificationBeforeShuruq != 0) {
@@ -47,11 +46,9 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
         print('notificationBeforeShuruq : $notificationBeforeShuruq');
         notificationTitle =
             '$prayer $inText $notificationBeforeShuruq $minutes';
-        print('notificationTitle : $notificationTitle');
       } else {
         print('notificationBeforeShuruq : $notificationBeforeShuruq');
         notificationTitle = '$prayer  $formattedTime';
-        print('notificationTitle : $notificationTitle');
       }
 
       if (sound == 'DEFAULT') {
