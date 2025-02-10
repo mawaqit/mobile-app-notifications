@@ -1,5 +1,5 @@
 class NotificationInfoModel {
-  String? mosqueName, sound, prayerName;
+  String? mosqueName, sound, prayerName , soundType;
   DateTime? time;
   int notificationBeforeAthan;
   int alarmId;
@@ -11,5 +11,6 @@ class NotificationInfoModel {
     required this.time,
     this.notificationBeforeAthan = 0,
     this.alarmId = 0,
+    required this.soundType,
   });
 }

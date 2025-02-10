@@ -11,11 +11,16 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_app_notifications/models/prayers/prayer_name.dart';
+import 'package:mobile_app_notifications/models/prayers/prayer_notification.dart';
 import 'package:mobile_app_notifications/models/prayers/prayer_time_format.dart';
 import 'package:mobile_app_notifications/prayer_services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tzl;
 import 'package:timezone/timezone.dart' as tz;
+
+
+
+var flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
 @pragma('vm:entry-point')
 void ringAlarm(int id, Map<String, dynamic> data) async {
@@ -25,6 +30,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
   String mosque = data['mosque'];
   String prayer = data['prayer'];
   String time = data['time'];
+  SoundType soundType = SoundType.values.firstWhere((e) => e.name == data['sound_type']);
   bool isPreNotification = data['isPreNotification'];
   String minutesToAthan = data['minutesToAthan'];
   int notificationBeforeShuruq = data['notificationBeforeShuruq'];
@@ -53,41 +59,80 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
 
       if (sound == 'DEFAULT') {
         adhanSound = null;
-      } else {
+      } else if(soundType == SoundType.customSound){
         adhanSound = 'resource://raw/${sound.substring(0, sound.length - 4)}';
+      }else{
+        adhanSound = sound;
       }
     }
     print('adhan sound: $adhanSound');
-    AwesomeNotifications().initialize('resource://drawable/logo', [
-      NotificationChannel(
-        channelKey: isPreNotification ? 'pre_notif' : adhanSound ?? 'DEFAULT',
-        channelName: 'mawaqit',
+
+    //
+    // Future<void> showNotification({
+    //   required int id,
+    //   required String notificationTitle,
+    //   required String mosque,
+    //   String? adhanSound,
+    //   bool isPreNotification = false,
+    // }) async {
+      String channelId = isPreNotification ? 'pre_notif' : (adhanSound ?? 'DEFAULT');
+
+      final AndroidNotificationDetails androidPlatformChannelSpecifics =
+      AndroidNotificationDetails(
+        channelId,
+        'mawaqit',
         channelDescription: 'mawaqit_channel',
-        importance: NotificationImportance.Max,
-        defaultColor: const Color(0xFF9D50DD),
-        ledColor: Colors.white,
-        playSound: true,
-        soundSource: isPreNotification ? null : adhanSound,
+        importance: Importance.max,
+        priority: Priority.high,
+        playSound: !isPreNotification,
+        sound: isPreNotification ? null : soundType == SoundType.customSound? RawResourceAndroidNotificationSound(adhanSound): UriAndroidNotificationSound(adhanSound ?? ''),
         enableVibration: true,
-        icon: 'resource://drawable/logo',
+        largeIcon: const DrawableResourceAndroidBitmap('logo'),
+        icon: 'logo',
         onlyAlertOnce: true,
-        criticalAlerts: true,
-        defaultRingtoneType: DefaultRingtoneType.Notification,
-      )
-    ]);
-    await AwesomeNotifications().createNotification(
-      content: NotificationContent(
-        id: id,
-        channelKey: isPreNotification ? 'pre_notif' : adhanSound ?? 'DEFAULT',
-        title: notificationTitle,
-        body: mosque,
-        category: NotificationCategory.Reminder,
-        criticalAlert: true,
-        wakeUpScreen: true,
-        largeIcon: 'resource://drawable/logo',
-        icon: 'resource://drawable/logo',
-      ),
-    );
+        ticker: 'ticker',
+      );
+
+      final NotificationDetails platformChannelSpecifics =
+      NotificationDetails(android: androidPlatformChannelSpecifics);
+
+      await flutterLocalNotificationsPlugin.show(
+        id,
+        notificationTitle,
+        mosque,
+        platformChannelSpecifics,
+      );
+    // }
+    // AwesomeNotifications().initialize('resource://drawable/logo', [
+    //   NotificationChannel(
+    //     channelKey: isPreNotification ? 'pre_notif' : adhanSound ?? 'DEFAULT',
+    //     channelName: 'mawaqit',
+    //     channelDescription: 'mawaqit_channel',
+    //     importance: NotificationImportance.Max,
+    //     defaultColor: const Color(0xFF9D50DD),
+    //     ledColor: Colors.white,
+    //     playSound: true,
+    //     soundSource: isPreNotification ? null : adhanSound,
+    //     enableVibration: true,
+    //     icon: 'resource://drawable/logo',
+    //     onlyAlertOnce: true,
+    //     criticalAlerts: true,
+    //     defaultRingtoneType: DefaultRingtoneType.Notification,
+    //   )
+    // ]);
+    // await AwesomeNotifications().createNotification(
+    //   content: NotificationContent(
+    //     id: id,
+    //     channelKey: isPreNotification ? 'pre_notif' : adhanSound ?? 'DEFAULT',
+    //     title: notificationTitle,
+    //     body: mosque,
+    //     category: NotificationCategory.Reminder,
+    //     criticalAlert: true,
+    //     wakeUpScreen: true,
+    //     largeIcon: 'resource://drawable/logo',
+    //     icon: 'resource://drawable/logo',
+    //   ),
+    // );
 
     ScheduleAdhan scheduleAdhan = ScheduleAdhan();
     scheduleAdhan.schedule();
@@ -130,7 +175,6 @@ class ScheduleAdhan {
     'IMSAK_NOTIFICATION',
   ];
 
-  var flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
   Future<bool> checkIOSNotificationPermissions() async {
     final iosPlugin =
@@ -208,6 +252,7 @@ class ScheduleAdhan {
                 'isPreNotification': true,
                 'minutesToAthan': minutesToAthan,
                 'notificationBeforeShuruq': 0,
+                'sound_type': prayer.soundType
               });
           print(
               'Pre Notification scheduled for ${prayer.prayerName} at : $preNotificationTime Id: $id');
@@ -250,6 +295,7 @@ class ScheduleAdhan {
                 'isPreNotification': false,
                 'minutesToAthan': '',
                 'notificationBeforeShuruq': notificationBeforeShuruq,
+                'sound_type': prayer.soundType
               });
           print(
               'Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');

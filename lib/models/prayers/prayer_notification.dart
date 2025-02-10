@@ -2,11 +2,18 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+enum SoundType {
+  none,
+  customSound,
+  systemSound,
+}
+
 class PrayerNotification {
   final int? prayer;
   final String? mosqueUuid;
   final int? notificationBeforeAthan;
   final String? notificationSound;
+  final SoundType soundType; // custom_sound , no_type , system_sound
 
   static getDBPrayerKeyByPrayer(int? prayer) {
     switch (prayer) {
@@ -46,20 +53,22 @@ class PrayerNotification {
   }
 
   PrayerNotification(this.prayer, this.mosqueUuid, this.notificationBeforeAthan,
-      this.notificationSound);
+      this.notificationSound , this.soundType);
 
   PrayerNotification.fromJson(Map<String, dynamic> json)
       : prayer = json['prayer'],
         mosqueUuid = json['mosqueUuid'],
         notificationBeforeAthan = json['notificationBeforeAthan'],
-        notificationSound = json['notificationSound'];
+        notificationSound = json['notificationSound'],
+        soundType = SoundType.values.firstWhere((e) => e.name == json['soundType'], orElse: () => SoundType.none); // Default to 'none' if missing
 
   Map<String, dynamic> toJson() {
     return {
       'prayer': prayer,
       'mosqueUuid': mosqueUuid,
       'notificationBeforeAthan': notificationBeforeAthan,
-      'notificationSound': notificationSound
+      'notificationSound': notificationSound,
+      'soundType': soundType.name, // Store as a string
     };
   }
 }
