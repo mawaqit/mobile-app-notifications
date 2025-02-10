@@ -264,130 +264,6 @@ class ScheduleAdhan {
     print(newAlarmIds.toList());
   }
 
-  // scheduleIOS() async {
-  //   try {
-  //     // Clear all scheduled notifications
-  //     await AwesomeNotifications().cancelAll();
-  //     print('Cleared previous Notifications');
-
-  //     await AwesomeNotifications().setListeners(onActionReceivedMethod: (receivedAction) async {
-  //       print('-------------------------------- notification received --------------------------------');
-  //     });
-  //     // Retrieve SharedPreferences and prayers list
-  //     SharedPreferences prefs = await SharedPreferences.getInstance();
-  //     var prayersList = await PrayerService().getPrayers();
-  //     int i = 0, j = 0;
-
-  //     if (prayersList.isEmpty) {
-  //       return; // Exit early if there are no prayers
-  //     } else {
-  //       // Loop to schedule up to 63 notifications
-  //       while (i < prayersList.length && j < 63) {
-  //         var prayer = prayersList[i];
-  //         int index = getPrayerIndex(prayer.prayerName!);
-
-  //         // Fetch prayer translations and preset strings
-  //         String translatedPrayerName = await PrayersName().getPrayerName(index);
-  //         String minutesToAthan = await PrayersName().getStringText();
-  //         String inText = await PrayersName().getInText();
-  //         String minutes = await PrayersName().getMinutesText();
-  //         int notificationBeforeShuruq = prefs.getInt('notificationBeforeShuruq') ?? 0;
-
-  //         // Pre-notification scheduling
-  //         DateTime preNotificationTime = prayer.time!.subtract(Duration(minutes: prayer.notificationBeforeAthan));
-  //         if (prayer.notificationBeforeAthan != 0 && preNotificationTime.isAfter(DateTime.now())) {
-  //           AwesomeNotifications().initialize('resource://drawable/logo', [
-  //             NotificationChannel(
-  //               channelKey: 'DEFAULT',
-  //               channelName: 'mawaqit',
-  //               channelDescription: 'mawaqit_channel',
-  //               importance: NotificationImportance.Max,
-  //               defaultColor: const Color(0xFF9D50DD),
-  //               ledColor: Colors.white,
-  //               playSound: true,
-  //               soundSource: null,
-  //               enableVibration: false,
-  //               icon: 'resource://drawable/logo',
-  //               onlyAlertOnce: true,
-  //               criticalAlerts: true,
-  //               defaultRingtoneType: DefaultRingtoneType.Notification,
-  //             )
-  //           ]);
-  //           await AwesomeNotifications().createNotification(
-  //             content: NotificationContent(
-  //               id: j,
-  //               channelKey: 'pre_notif',
-  //               title: '$minutesToAthan $translatedPrayerName',
-  //               body: prayer.mosqueName,
-  //             ),
-  //             schedule: NotificationCalendar(
-  //               year: preNotificationTime.year,
-  //               month: preNotificationTime.month,
-  //               day: preNotificationTime.day,
-  //               hour: preNotificationTime.hour,
-  //               minute: preNotificationTime.minute,
-  //               second: 0,
-  //               preciseAlarm: true,
-  //               repeats: false,
-  //             ),
-  //           );
-  //           print('Pre Notification Scheduled at: $preNotificationTime Id: $j');
-  //           j++;
-  //         }
-
-  //         // Adhan notification scheduling
-  //         DateTime notificationTime = index == 1 ? prayer.time!.subtract(Duration(minutes: notificationBeforeShuruq)) : prayer.time!;
-  //         if (notificationTime.isAfter(DateTime.now())) {
-  //           AwesomeNotifications().initialize('resource://drawable/logo', [
-  //             NotificationChannel(
-  //               channelKey: prayer.sound ?? 'DEFAULT',
-  //               channelName: 'mawaqit',
-  //               channelDescription: 'mawaqit_channel',
-  //               importance: NotificationImportance.Max,
-  //               defaultColor: const Color(0xFF9D50DD),
-  //               ledColor: Colors.white,
-  //               playSound: true,
-  //               soundSource: prayer.sound,
-  //               enableVibration: false,
-  //               onlyAlertOnce: true,
-  //               criticalAlerts: true,
-  //               defaultRingtoneType: DefaultRingtoneType.Notification,
-  //             )
-  //           ]);
-  //           await AwesomeNotifications().createNotification(
-  //             content: NotificationContent(
-  //               id: j,
-  //               channelKey: prayer.sound ?? 'DEFAULT',
-  //               title: notificationBeforeShuruq != 0
-  //                   ? '$translatedPrayerName $inText $notificationBeforeShuruq $minutes'
-  //                   : '$translatedPrayerName ${DateFormat('HH:mm').format(notificationTime)}',
-  //               body: prayer.mosqueName,
-  //             ),
-  //             schedule: NotificationCalendar(
-  //               year: notificationTime.year,
-  //               month: notificationTime.month,
-  //               day: notificationTime.day,
-  //               hour: notificationTime.hour,
-  //               minute: notificationTime.minute,
-  //               second: 0,
-  //               preciseAlarm: true,
-  //               repeats: false,
-  //             ),
-  //           );
-  //           print('Adhan Notification Scheduled at: $notificationTime Id: $j');
-  //           j++;
-  //         }
-
-  //         i++;
-  //       }
-  //     }
-  //   } catch (e, t) {
-  //     print('Error scheduling notifications');
-  //     print(t);
-  //     print(e);
-  //   }
-  // }
-
   scheduleIOS() async {
     try {
       // Clear all scheduled notifications
@@ -502,6 +378,7 @@ class ScheduleAdhan {
     );
     const initializationSettings = InitializationSettings(
       iOS: initializationSettingsIOS,
+        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
     );
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
