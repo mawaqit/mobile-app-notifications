@@ -76,6 +76,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
     //   bool isPreNotification = false,
     // }) async {
       String channelId = isPreNotification ? 'pre_notif' : (adhanSound ?? 'DEFAULT');
+      print('sound type from user: ${soundType}');
 
       final AndroidNotificationDetails androidPlatformChannelSpecifics =
       AndroidNotificationDetails(
