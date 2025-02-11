@@ -60,7 +60,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       if (sound == 'DEFAULT') {
         adhanSound = null;
       } else if(soundType == SoundType.customSound){
-        adhanSound = 'resource://raw/${sound.substring(0, sound.length - 4)}';
+        adhanSound = sound.substring(0, sound.length - 4);
       }else{
         adhanSound = sound;
       }
