@@ -90,9 +90,11 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
         enableVibration: true,
         largeIcon: const DrawableResourceAndroidBitmap('logo'),
         icon: 'logo',
-        onlyAlertOnce: true,
+        onlyAlertOnce: false,
         ticker: 'ticker',
-          audioAttributesUsage: AudioAttributesUsage.alarm
+        audioAttributesUsage: AudioAttributesUsage.alarm,
+        visibility: NotificationVisibility.public,
+        category: AndroidNotificationCategory.alarm,
       );
 
       final NotificationDetails platformChannelSpecifics =
