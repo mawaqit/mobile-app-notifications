@@ -92,6 +92,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
         icon: 'logo',
         onlyAlertOnce: true,
         ticker: 'ticker',
+          audioAttributesUsage: AudioAttributesUsage.alarm
       );
 
       final NotificationDetails platformChannelSpecifics =
