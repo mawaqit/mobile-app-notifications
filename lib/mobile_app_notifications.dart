@@ -105,10 +105,22 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
     );
 
 
-    var channels = await flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.getNotificationChannels();
-    channels?.forEach((channel) {
-      print('Channel: ${channel.id}, Name: ${channel.name}');
-    });
+    var channels = await flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.getNotificationChannels();
+
+    if (channels == null || channels.isEmpty) {
+      print('No notification channels found.');
+    } else {
+      for (var channel in channels) {
+        if (channel.id == null || channel.name == null) {
+          print('Found a corrupted channel with null values: ${channel.toString()}');
+        } else {
+          print('Channel: ${channel.id}, Name: ${channel.name}');
+        }
+      }
+    }
+
     // }
     // AwesomeNotifications().initialize('resource://drawable/logo', [
     //   NotificationChannel(
