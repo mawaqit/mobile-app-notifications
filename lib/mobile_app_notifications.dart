@@ -103,6 +103,12 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       mosque,
       platformChannelSpecifics,
     );
+
+
+    var channels = await flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.getNotificationChannels();
+    channels?.forEach((channel) {
+      print('Channel: ${channel.id}, Name: ${channel.name}');
+    });
     // }
     // AwesomeNotifications().initialize('resource://drawable/logo', [
     //   NotificationChannel(
