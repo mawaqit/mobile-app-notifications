@@ -18,6 +18,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tzl;
 import 'package:timezone/timezone.dart' as tz;
 
+import 'models/notification/notification_info_model.dart';
+
 var flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
 @pragma('vm:entry-point')
@@ -140,6 +142,43 @@ class ScheduleAdhan {
     'ISHAA_NOTIFICATION',
     'IMSAK_NOTIFICATION',
   ];
+
+  Future<void> showSilentNotification() async {
+    List<NotificationInfoModel> prayers = [
+      NotificationInfoModel(prayerName: 'pre fajr', mosqueName: 'silent mosque', sound: null, time: null, soundType: null),
+      NotificationInfoModel(prayerName: 'fajr', mosqueName: 'silent mosque', sound: null, time: null, soundType: null),
+      NotificationInfoModel(prayerName: 'pre dhur', mosqueName: 'silent mosque', sound: null, time: null, soundType: null),
+      NotificationInfoModel(prayerName: 'dhur', mosqueName: 'silent mosque', sound: null, time: null, soundType: null),
+      NotificationInfoModel(prayerName: 'pre asr', mosqueName: 'silent mosque', sound: null, time: null, soundType: null),
+      NotificationInfoModel(prayerName: 'asr', mosqueName: 'silent mosque', sound: null, time: null, soundType: null),
+      NotificationInfoModel(prayerName: 'pre maghrib', mosqueName: 'silent mosque', sound: null, time: null, soundType: null),
+      NotificationInfoModel(prayerName: 'maghrib', mosqueName: 'silent mosque', sound: null, time: null, soundType: null),
+      NotificationInfoModel(prayerName: 'pre isha', mosqueName: 'silent mosque', sound: null, time: null, soundType: null),
+      NotificationInfoModel(prayerName: 'isha', mosqueName: 'silent mosque', sound: null, time: null, soundType: null),
+    ];
+
+    for (int i = 0; i >= prayers.length; i++) {
+      AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+        prayers[i].prayerName ?? '', // Unique ID
+        prayers[i].prayerName ?? '', // Unique ID
+        channelDescription: 'This channel is for silent notifications',
+        playSound: false, // No sound
+        enableVibration: false, // No vibration
+        importance: Importance.high, // Low importance hides in the notification bar
+        priority: Priority.max, // Min priority avoids showing in UI
+        visibility: NotificationVisibility.secret, // Hides from the status bar
+      );
+
+      NotificationDetails notificationDetails = NotificationDetails(android: androidDetails);
+
+      await flutterLocalNotificationsPlugin.show(
+        i, // Notification ID
+        null, // No title
+        null, // No body
+        notificationDetails,
+      );
+    }
+  }
 
   Future<bool> checkIOSNotificationPermissions() async {
     final iosPlugin = flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
