@@ -3,6 +3,7 @@
 library mobile_app_notifications;
 
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
@@ -131,6 +132,41 @@ class ScheduleAdhan {
   ];
 
   var flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
+
+  int generateSixDigitRandom() {
+    math.Random random = math.Random();
+    return 10000000 + random.nextInt(90000000); // Ensures an 8-digit number
+  }
+
+  Future<void> showSilentNotification({required String prayer , bool isPreNotification = false}) async {
+    String baseChannelId = prayer.toLowerCase(); // e.g., 'fajr', 'dhuhr'
+    String channelId = isPreNotification ? 'Pre $baseChannelId ' : '$baseChannelId Adhan';
+    print('Unique channel name  :  $channelId');
+
+
+    AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      channelId,
+      channelId,
+      channelDescription: isPreNotification ? 'Pre Adhan notifications for $prayer' : 'Adhan notifications for $prayer',
+      playSound: false, // No sound
+      enableVibration: false, // No vibration
+      importance: Importance.low, // Low importance hides in the notification bar
+      priority: Priority.min, // Min priority avoids showing in UI
+      visibility: NotificationVisibility.secret, // Hides from the status bar
+    );
+
+    NotificationDetails notificationDetails = NotificationDetails(android: androidDetails);
+    int id = generateSixDigitRandom();
+    print('notification id   :  $id');
+    await flutterLocalNotificationsPlugin.show(
+      id, // Notification ID
+      null, // No title
+      null, // No body
+      notificationDetails,
+    );
+  }
+
 
   Future<bool> checkIOSNotificationPermissions() async {
     final iosPlugin =
