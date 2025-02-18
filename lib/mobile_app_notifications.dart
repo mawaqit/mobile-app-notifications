@@ -59,11 +59,18 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       }
     }
     print('adhan sound: $adhanSound');
+
+
+    String baseChannelId = prayer.toLowerCase(); // e.g., 'fajr', 'dhuhr'
+    String channelId = isPreNotification ? 'Pre $baseChannelId ' : '$baseChannelId Adhan';
+    print('Unique channel name  :  $channelId');
+
+
     AwesomeNotifications().initialize('resource://drawable/logo', [
       NotificationChannel(
-        channelKey: isPreNotification ? 'pre_notif' : adhanSound ?? 'DEFAULT',
-        channelName: 'mawaqit',
-        channelDescription: 'mawaqit_channel',
+        channelKey: channelId,
+        channelName: channelId,
+        channelDescription: isPreNotification ? 'Pre Adhan notifications for $prayer' : 'Adhan notifications for $prayer',
         importance: NotificationImportance.Max,
         defaultColor: const Color(0xFF9D50DD),
         ledColor: Colors.white,
