@@ -146,8 +146,8 @@ class ScheduleAdhan {
     return 10000000 + random.nextInt(90000000); // Ensures an 8-digit number
   }
 
-  Future<void> showSilentNotification({required String prayer , bool isPreNotification = false}) async {
-    String baseChannelId = prayer.toLowerCase(); // e.g., 'fajr', 'dhuhr'
+  Future<void> showSilentNotification({required int prayer , bool isPreNotification = false}) async {
+    String baseChannelId = PrayersName().getPrayerWithoutLanguage(prayer); // e.g., 'fajr', 'dhuhr'
     String channelId = isPreNotification ? 'Pre $baseChannelId ' : '$baseChannelId Adhan';
     print('Unique channel name  :  $channelId');
 

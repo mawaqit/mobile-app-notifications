@@ -366,4 +366,25 @@ class PrayersName {
     final db = await SharedPreferences.getInstance();
     return db.getString('MAWAQIT_LANGUAGE') ?? 'en';
   }
+
+  String getPrayerWithoutLanguage(int index){
+    switch (index) {
+    case 0:
+    return 'fajr';
+    case 1:
+    return 'shuruq';
+    case 2:
+    return 'duhr';
+    case 3:
+    return 'asr';
+    case 4:
+    return 'maghrib';
+    case 5:
+    return 'ishaa';
+    case 6:
+    return 'imsak';
+    default:
+    return 'Desconocido';
+    }
+  }
 }
