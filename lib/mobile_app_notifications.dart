@@ -17,6 +17,7 @@ import 'package:mobile_app_notifications/prayer_services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tzl;
 import 'package:timezone/timezone.dart' as tz;
+var flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
 @pragma('vm:entry-point')
 void ringAlarm(int id, Map<String, dynamic> data) async {
@@ -61,41 +62,79 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
     print('adhan sound: $adhanSound');
 
 
+
+
+
+    // Assign per-prayer channel ID
     String baseChannelId = prayer.toLowerCase(); // e.g., 'fajr', 'dhuhr'
     String channelId = isPreNotification ? 'Pre $baseChannelId ' : '$baseChannelId Adhan';
+
     print('Unique channel name  :  $channelId');
+    
 
-
-    AwesomeNotifications().initialize('resource://drawable/logo', [
-      NotificationChannel(
-        channelKey: channelId,
-        channelName: channelId,
-        channelDescription: isPreNotification ? 'Pre Adhan notifications for $prayer' : 'Adhan notifications for $prayer',
-        importance: NotificationImportance.Max,
-        defaultColor: const Color(0xFF9D50DD),
-        ledColor: Colors.white,
-        playSound: true,
-        soundSource: isPreNotification ? null : adhanSound,
-        enableVibration: true,
-        icon: 'resource://drawable/logo',
-        onlyAlertOnce: true,
-        criticalAlerts: true,
-        defaultRingtoneType: DefaultRingtoneType.Notification,
-      )
-    ]);
-    await AwesomeNotifications().createNotification(
-      content: NotificationContent(
-        id: id,
-        channelKey: isPreNotification ? 'pre_notif' : adhanSound ?? 'DEFAULT',
-        title: notificationTitle,
-        body: mosque,
-        category: NotificationCategory.Reminder,
-        criticalAlert: true,
-        wakeUpScreen: true,
-        largeIcon: 'resource://drawable/logo',
-        icon: 'resource://drawable/logo',
-      ),
+    print(" ----- ------- -- - - - --- -channelId: $channelId");
+    final AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
+      channelId,
+      channelId,
+      channelDescription: isPreNotification ? 'Pre Adhan notifications for $prayer' : 'Adhan notifications for $prayer',
+      importance: Importance.max,
+      priority: Priority.high,
+      playSound: !isPreNotification,
+      sound: isPreNotification
+          ? null
+          // : soundType == SoundType.customSound
+          : RawResourceAndroidNotificationSound(adhanSound),
+          // : UriAndroidNotificationSound(adhanSound ?? ''),
+      enableVibration: true,
+      largeIcon: const DrawableResourceAndroidBitmap('logo'),
+      icon: 'logo',
+      onlyAlertOnce: false,
+      ticker: 'ticker',
+      audioAttributesUsage: AudioAttributesUsage.alarm,
+      visibility: NotificationVisibility.public,
+      category: AndroidNotificationCategory.alarm,
     );
+
+    final NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    await flutterLocalNotificationsPlugin.show(
+      id,
+      notificationTitle,
+      mosque,
+      platformChannelSpecifics,
+    );
+
+
+    // AwesomeNotifications().initialize('resource://drawable/logo', [
+    //   NotificationChannel(
+    //     channelKey: channelId,
+    //     channelName: channelId,
+    //     channelDescription: isPreNotification ? 'Pre Adhan notifications for $prayer' : 'Adhan notifications for $prayer',
+    //     importance: NotificationImportance.Max,
+    //     defaultColor: const Color(0xFF9D50DD),
+    //     ledColor: Colors.white,
+    //     playSound: true,
+    //     soundSource: isPreNotification ? null : adhanSound,
+    //     enableVibration: true,
+    //     icon: 'resource://drawable/logo',
+    //     onlyAlertOnce: true,
+    //     criticalAlerts: true,
+    //     defaultRingtoneType: DefaultRingtoneType.Notification,
+    //   )
+    // ]);
+    // await AwesomeNotifications().createNotification(
+    //   content: NotificationContent(
+    //     id: id,
+    //     channelKey: isPreNotification ? 'pre_notif' : adhanSound ?? 'DEFAULT',
+    //     title: notificationTitle,
+    //     body: mosque,
+    //     category: NotificationCategory.Reminder,
+    //     criticalAlert: true,
+    //     wakeUpScreen: true,
+    //     largeIcon: 'resource://drawable/logo',
+    //     icon: 'resource://drawable/logo',
+    //   ),
+    // );
 
     ScheduleAdhan scheduleAdhan = ScheduleAdhan();
     scheduleAdhan.schedule();
@@ -138,7 +177,6 @@ class ScheduleAdhan {
     'IMSAK_NOTIFICATION',
   ];
 
-  var flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
 
   // int generateSixDigitRandom() {
