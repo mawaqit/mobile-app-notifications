@@ -62,21 +62,17 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       }
     }
     print('adhan sound: $adhanSound');
-
-    //
-    // Future<void> showNotification({
-    //   required int id,
-    //   required String notificationTitle,
-    //   required String mosque,
-    //   String? adhanSound,
-    //   bool isPreNotification = false,
-    // }) async {
-    String channelId = isPreNotification ? 'pre_notif' : (adhanSound ?? 'DEFAULT');
     print('sound type from user: $soundType');
+
+    // Assign per-prayer channel ID
+    String baseChannelId = prayer.toLowerCase(); // e.g., 'fajr', 'dhuhr'
+    String channelId = isPreNotification ? '${baseChannelId}_pre_notif' : '${baseChannelId}_adhan';
+
+
 
     final AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
       channelId,
-      isPreNotification ? 'Pre Adhan - $prayer' : 'Adhan - $prayer',
+      channelId,
       channelDescription: isPreNotification ? 'Adhan notifications for $prayer' : 'Adhan notifications for $prayer',
       importance: Importance.max,
       priority: Priority.high,
@@ -104,37 +100,6 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       mosque,
       platformChannelSpecifics,
     );
-    // }
-    // AwesomeNotifications().initialize('resource://drawable/logo', [
-    //   NotificationChannel(
-    //     channelKey: isPreNotification ? 'pre_notif' : adhanSound ?? 'DEFAULT',
-    //     channelName: 'mawaqit',
-    //     channelDescription: 'mawaqit_channel',
-    //     importance: NotificationImportance.Max,
-    //     defaultColor: const Color(0xFF9D50DD),
-    //     ledColor: Colors.white,
-    //     playSound: true,
-    //     soundSource: isPreNotification ? null : adhanSound,
-    //     enableVibration: true,
-    //     icon: 'resource://drawable/logo',
-    //     onlyAlertOnce: true,
-    //     criticalAlerts: true,
-    //     defaultRingtoneType: DefaultRingtoneType.Notification,
-    //   )
-    // ]);
-    // await AwesomeNotifications().createNotification(
-    //   content: NotificationContent(
-    //     id: id,
-    //     channelKey: isPreNotification ? 'pre_notif' : adhanSound ?? 'DEFAULT',
-    //     title: notificationTitle,
-    //     body: mosque,
-    //     category: NotificationCategory.Reminder,
-    //     criticalAlert: true,
-    //     wakeUpScreen: true,
-    //     largeIcon: 'resource://drawable/logo',
-    //     icon: 'resource://drawable/logo',
-    //   ),
-    // );
 
     ScheduleAdhan scheduleAdhan = ScheduleAdhan();
     scheduleAdhan.schedule();
