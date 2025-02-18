@@ -69,7 +69,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
 
     // Assign per-prayer channel ID
     String baseChannelId = prayer.toLowerCase(); // e.g., 'fajr', 'dhuhr'
-    String channelId = isPreNotification ? 'Pre $baseChannelId ' : '$baseChannelId adhan';
+    String channelId = isPreNotification ? 'Pre $baseChannelId ' : '$baseChannelId Adhan';
 
     print(" ----- ------- -- - - - --- -channelId: $channelId");
     final AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
@@ -149,17 +149,20 @@ class ScheduleAdhan {
     return 10000000 + random.nextInt(90000000); // Ensures an 8-digit number
   }
 
-  Future<void> showSilentNotification({required String prayer}) async {
-    String uniqueChannel = '${prayer}_${generateSixDigitRandom()}';
-    print('Unique channel name  :  $uniqueChannel');
+  Future<void> showSilentNotification({required String prayer , bool isPreNotification = false}) async {
+    String baseChannelId = prayer.toLowerCase(); // e.g., 'fajr', 'dhuhr'
+    String channelId = isPreNotification ? 'Pre $baseChannelId ' : '$baseChannelId Adhan';
+    print('Unique channel name  :  $channelId');
+
+
     AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      uniqueChannel,
-      uniqueChannel,
-      channelDescription: 'This channel is for silent notifications',
+      channelId,
+      channelId,
+      channelDescription: isPreNotification ? 'Pre Adhan notifications for $prayer' : 'Adhan notifications for $prayer',
       playSound: false, // No sound
       enableVibration: false, // No vibration
-      importance: Importance.high, // Low importance hides in the notification bar
-      priority: Priority.max, // Min priority avoids showing in UI
+      importance: Importance.low, // Low importance hides in the notification bar
+      priority: Priority.min, // Min priority avoids showing in UI
       visibility: NotificationVisibility.secret, // Hides from the status bar
     );
 
