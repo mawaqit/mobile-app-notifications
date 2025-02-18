@@ -4,6 +4,7 @@ library mobile_app_notifications;
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter/material.dart';
@@ -74,7 +75,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
     final AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
       channelId,
       channelId,
-      channelDescription: isPreNotification ? 'Adhan notifications for $prayer' : 'Adhan notifications for $prayer',
+      channelDescription: isPreNotification ? 'Pre Adhan notifications for $prayer' : 'Adhan notifications for $prayer',
       importance: Importance.max,
       priority: Priority.high,
       playSound: !isPreNotification,
@@ -143,41 +144,34 @@ class ScheduleAdhan {
     'IMSAK_NOTIFICATION',
   ];
 
-  Future<void> showSilentNotification() async {
-    List<NotificationInfoModel> prayers = [
-      NotificationInfoModel(prayerName: 'pre fajr', mosqueName: 'silent mosque', sound: null, time: null, soundType: null),
-      NotificationInfoModel(prayerName: 'fajr', mosqueName: 'silent mosque', sound: null, time: null, soundType: null),
-      NotificationInfoModel(prayerName: 'pre dhur', mosqueName: 'silent mosque', sound: null, time: null, soundType: null),
-      NotificationInfoModel(prayerName: 'dhur', mosqueName: 'silent mosque', sound: null, time: null, soundType: null),
-      NotificationInfoModel(prayerName: 'pre asr', mosqueName: 'silent mosque', sound: null, time: null, soundType: null),
-      NotificationInfoModel(prayerName: 'asr', mosqueName: 'silent mosque', sound: null, time: null, soundType: null),
-      NotificationInfoModel(prayerName: 'pre maghrib', mosqueName: 'silent mosque', sound: null, time: null, soundType: null),
-      NotificationInfoModel(prayerName: 'maghrib', mosqueName: 'silent mosque', sound: null, time: null, soundType: null),
-      NotificationInfoModel(prayerName: 'pre isha', mosqueName: 'silent mosque', sound: null, time: null, soundType: null),
-      NotificationInfoModel(prayerName: 'isha', mosqueName: 'silent mosque', sound: null, time: null, soundType: null),
-    ];
+  int generateSixDigitRandom() {
+    math.Random random = math.Random();
+    return 10000000 + random.nextInt(90000000); // Ensures an 8-digit number
+  }
 
-    for (int i = 0; i >= prayers.length; i++) {
-      AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-        prayers[i].prayerName ?? '', // Unique ID
-        prayers[i].prayerName ?? '', // Unique ID
-        channelDescription: 'This channel is for silent notifications',
-        playSound: false, // No sound
-        enableVibration: false, // No vibration
-        importance: Importance.high, // Low importance hides in the notification bar
-        priority: Priority.max, // Min priority avoids showing in UI
-        visibility: NotificationVisibility.secret, // Hides from the status bar
-      );
+  Future<void> showSilentNotification({required String prayer}) async {
+    String uniqueChannel = '${prayer}_${generateSixDigitRandom()}';
+    print('Unique channel name  :  $uniqueChannel');
+    AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      uniqueChannel,
+      uniqueChannel,
+      channelDescription: 'This channel is for silent notifications',
+      playSound: false, // No sound
+      enableVibration: false, // No vibration
+      importance: Importance.high, // Low importance hides in the notification bar
+      priority: Priority.max, // Min priority avoids showing in UI
+      visibility: NotificationVisibility.secret, // Hides from the status bar
+    );
 
-      NotificationDetails notificationDetails = NotificationDetails(android: androidDetails);
-
-      await flutterLocalNotificationsPlugin.show(
-        i, // Notification ID
-        null, // No title
-        null, // No body
-        notificationDetails,
-      );
-    }
+    NotificationDetails notificationDetails = NotificationDetails(android: androidDetails);
+    int id = generateSixDigitRandom();
+    print('notification id   :  $id');
+    await flutterLocalNotificationsPlugin.show(
+      id, // Notification ID
+      null, // No title
+      null, // No body
+      notificationDetails,
+    );
   }
 
   Future<bool> checkIOSNotificationPermissions() async {
