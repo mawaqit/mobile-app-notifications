@@ -355,12 +355,15 @@ class ScheduleAdhan {
 
           if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
             print('Scheduling default notification for: ${prayer.prayerName}');
+            print('Prayer SoundType: ${prayer.soundType}');
+            print('Prayer SoundType name: ${SoundType.systemSound.name}');
 
             if (prayer.soundType == SoundType.systemSound.name) {
               String? soundFile;
 
               if (prayer.sound?.isNotEmpty == true) {
                 soundFile = await getDeviceSound(prayer.sound ?? "");
+                print("Prayer Sound: $soundFile");
               }
 
               await iosNotificationSchedular(
