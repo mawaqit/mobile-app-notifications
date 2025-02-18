@@ -2,6 +2,7 @@
 
 library mobile_app_notifications;
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
@@ -356,14 +357,18 @@ class ScheduleAdhan {
             print('Scheduling default notification for: ${prayer.prayerName}');
 
             if (prayer.soundType == SoundType.systemSound.name) {
-              String? soundFile = prayer.sound?.isNotEmpty == true ? File(prayer.sound!).uri.pathSegments.last : prayer.sound;
+              String? soundFile;
+
+              if (prayer.sound?.isNotEmpty == true) {
+                soundFile = await getDeviceSound(prayer.sound ?? "");
+              }
 
               await iosNotificationSchedular(
                 prayer.alarmId,
                 notificationTime,
                 notificationTitle,
                 prayer.mosqueName,
-                soundFile,
+                soundFile ?? prayer.sound,
               );
             } else {
               await iosNotificationSchedular(
@@ -447,6 +452,40 @@ class ScheduleAdhan {
     } catch (e, s) {
       print('ERROR: $e');
       print('stack trace: $s');
+    }
+  }
+
+  Future<String?> getDeviceSound(String path) async {
+    try {
+      const savedAudio = 'SAVED_AUDIO';
+      final prefs = await SharedPreferences.getInstance();
+      final savedFilesJson = prefs.getString(savedAudio) ?? '';
+
+      if (savedFilesJson.isNotEmpty) {
+        final savedFiles = List<Map<String, String>>.from(
+          jsonDecode(savedFilesJson).map((e) => Map<String, String>.from(e)),
+        );
+
+        for (var file in savedFiles) {
+          if (file["path"] == path && await fileExists(file["path"]!)) {
+            return file['name'];
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Exception in getDeviceSound: $e");
+    }
+    return null;
+  }
+
+  Future<bool> fileExists(String path) async {
+    try {
+      File file = File(path);
+      RandomAccessFile raf = file.openSync();
+      raf.closeSync();
+      return true;
+    } catch (e) {
+      return false;
     }
   }
 }
