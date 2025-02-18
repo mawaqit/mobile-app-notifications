@@ -354,13 +354,26 @@ class ScheduleAdhan {
 
           if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
             print('Scheduling default notification for: ${prayer.prayerName}');
-            await iosNotificationSchedular(
-              prayer.alarmId,
-              notificationTime,
-              notificationTitle,
-              prayer.mosqueName,
-              prayer.sound,
-            );
+
+            if (prayer.soundType == SoundType.systemSound.name) {
+              String? soundFile = prayer.sound?.isNotEmpty == true ? File(prayer.sound!).uri.pathSegments.last : prayer.sound;
+
+              await iosNotificationSchedular(
+                prayer.alarmId,
+                notificationTime,
+                notificationTitle,
+                prayer.mosqueName,
+                soundFile,
+              );
+            } else {
+              await iosNotificationSchedular(
+                prayer.alarmId,
+                notificationTime,
+                notificationTitle,
+                prayer.mosqueName,
+                prayer.sound,
+              );
+            }
             print('Notification scheduled for ${prayer.prayerName} at: $notificationTime with Id: ${prayer.alarmId}');
             j++;
             // }
