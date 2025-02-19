@@ -81,9 +81,9 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       playSound: !isPreNotification,
       sound: isPreNotification
           ? null
-          // : soundType == SoundType.customSound
-          : RawResourceAndroidNotificationSound(adhanSound),
-      // : UriAndroidNotificationSound(adhanSound ?? ''),
+          : soundType == SoundType.customSound
+              ? RawResourceAndroidNotificationSound(adhanSound)
+              : UriAndroidNotificationSound(adhanSound ?? ''),
       enableVibration: true,
       largeIcon: const DrawableResourceAndroidBitmap('logo'),
       icon: 'logo',
