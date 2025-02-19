@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/cupertino.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'models/mosque/detailed_mosque.dart';
@@ -62,13 +63,13 @@ class PrayerService {
           print('Alarm ID: $alarmId');
 
           NotificationInfoModel prayer = NotificationInfoModel(
-            mosqueName: mosque.name,
-            sound: obj.notificationSound,
-            prayerName: prayerName,
-            time: time,
-            notificationBeforeAthan: notificationData?.notificationBeforeAthan ?? 0,
-            alarmId: alarmId,
-          );
+              mosqueName: mosque.name,
+              sound: obj.notificationSound,
+              prayerName: prayerName,
+              time: time,
+              notificationBeforeAthan: notificationData?.notificationBeforeAthan ?? 0,
+              alarmId: alarmId,
+              soundType: obj.soundType.name);
 
           prayersList.add(prayer);
         }
@@ -162,5 +163,39 @@ class PrayerService {
     final mosque = DetailedMosque.fromJson(mosqueJson);
 
     return mosque;
+  }
+
+  Future<String?> getDeviceSound(String path) async {
+    try {
+      const savedAudio = 'SAVED_AUDIO';
+      final prefs = await SharedPreferences.getInstance();
+      final savedFilesJson = prefs.getString(savedAudio) ?? '';
+
+      if (savedFilesJson.isNotEmpty) {
+        final savedFiles = List<Map<String, String>>.from(
+          jsonDecode(savedFilesJson).map((e) => Map<String, String>.from(e)),
+        );
+
+        for (var file in savedFiles) {
+          if (file["path"] == path && await fileExists(file["path"]!)) {
+            return file['name'];
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Exception in getDeviceSound: $e");
+    }
+    return null;
+  }
+
+  Future<bool> fileExists(String path) async {
+    try {
+      File file = File(path);
+      RandomAccessFile raf = file.openSync();
+      raf.closeSync();
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 }

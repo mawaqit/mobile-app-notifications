@@ -17,7 +17,7 @@ void main() {
     test('should return notification data if notification sound is not SILENT',
         () async {
       final dummyPrayerNotification =
-          PrayerNotification(0, 'mosqueUuid', 10, 'DEFAULT');
+          PrayerNotification(0, 'mosqueUuid', 10, 'DEFAULT', SoundType.none);
 
       when(mockPrayerService.getPrayerDataByIndex(any, 0))
           .thenAnswer((_) async => dummyPrayerNotification);
@@ -32,7 +32,7 @@ void main() {
     });
     test('should return NULL if notification sound is SILENT', () async {
       final dummyPrayerNotification =
-          PrayerNotification(0, 'mosqueUuid', 10, 'SILENT');
+          PrayerNotification(0, 'mosqueUuid', 10, 'SILENT' , SoundType.none);
 
       when(mockPrayerService.getPrayerDataByIndex(any, 0))
           .thenAnswer((_) async => dummyPrayerNotification);
@@ -134,7 +134,7 @@ void main() {
     });
 
     final dummyGetPrayerDataByIndex =
-        PrayerNotification(0, 'mosqueUuid', 10, 'DEFAULT');
+        PrayerNotification(0, 'mosqueUuid', 10, 'DEFAULT' , SoundType.none);
     final dummyGetMosque = DetailedMosque(
       [
         {
@@ -227,7 +227,7 @@ void main() {
 
       when(mockPrayerNotificationService.getPrayerNotificationFromDB(any))
           .thenAnswer(
-              (_) async => PrayerNotification(0, 'mosqueUuid', 10, 'DEFAULT'));
+              (_) async => PrayerNotification(0, 'mosqueUuid', 10, 'DEFAULT' , SoundType.none));
 
       when(mockPrayerService.getPrayers()).thenAnswer((_) async {
         return [
@@ -237,6 +237,7 @@ void main() {
             prayerName: 'FAJR',
             time: DateTime.now().add(const Duration(days: 1)),
             notificationBeforeAthan: 10,
+            soundType: 'customSound'
           ),
         ];
       });
@@ -256,7 +257,7 @@ void main() {
         () async {
       when(mockPrayerNotificationService.getPrayerNotificationFromDB(any))
           .thenAnswer((_) async =>
-              PrayerNotification(1, null, 10, 'DEFAULT')); // mosqueUuid is null
+              PrayerNotification(1, null, 10, 'DEFAULT' , SoundType.none)); // mosqueUuid is null
 
       when(mockPrayerService.getPrayers()).thenAnswer((_) async => []);
 
@@ -277,7 +278,7 @@ void main() {
 
       when(mockPrayerNotificationService.getPrayerNotificationFromDB(any))
           .thenAnswer((_) async => PrayerNotification(
-              1, 'mosqueUuid', 10, 'DEFAULT')); // Example data
+              1, 'mosqueUuid', 10, 'DEFAULT' , SoundType.none)); // Example data
 
       when(mockPrayerService.getPrayers()).thenAnswer((_) async => []);
 

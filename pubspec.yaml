@@ -11,7 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   android_alarm_manager_plus: 4.0.2
-  awesome_notifications: ^0.8.2
+#  awesome_notifications: ^0.8.2
   intl:
   shared_preferences: 2.2.1
   json_annotation: 4.9.0
