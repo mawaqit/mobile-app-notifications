@@ -61,9 +61,9 @@ class PrayerService {
           // String indexStr = index.toString(), dayStr = time!.day.toString(), monthStr = time.month.toString();
           // String str = indexStr + dayStr + monthStr;
           // int alarmId = int.parse(str);
-          int uuid = generateUniqueId();
-          print('uuid: $uuid');
-          int alarmId = int.parse("$index$uuid");
+          // int uuid = generateUniqueId();
+          // print('uuid: $uuid');
+          int alarmId = generateUniqueId();
           print('Alarm ID: $alarmId');
 
           NotificationInfoModel prayer = NotificationInfoModel(
