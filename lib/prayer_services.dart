@@ -206,7 +206,7 @@ class PrayerService {
 
   int makeAlarmId(){
     String uuid = _uuid.v4();
-    int alarmId = int.parse(uuid.substring(0, 8), radix: 16);
+    int alarmId = int.parse(uuid.substring(0, 8), radix: 16) & 0x7FFFFFFF;
     return alarmId;
   }
 }
