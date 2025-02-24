@@ -12,6 +12,8 @@ import 'models/prayers/prayer_notification.dart';
 
 class PrayerService {
   final  _uuid = const Uuid();
+  static List<String> newAlarmIds = [];
+
   final List<String> prayerKeys = [
     'FAJR_NOTIFICATION',
     'SHURUQ_NOTIFICATION',

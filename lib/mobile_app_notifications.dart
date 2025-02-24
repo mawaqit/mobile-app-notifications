@@ -234,23 +234,23 @@ class ScheduleAdhan {
         newAlarmIds.add(id);
         try {
           //For pre notification
-          // AndroidAlarmManager.oneShotAt(preNotificationTime, int.parse(id), ringAlarm,
-          //     alarmClock: true,
-          //     allowWhileIdle: true,
-          //     exact: true,
-          //     wakeup: true,
-          //     rescheduleOnReboot: true,
-          //     params: {
-          //       'index': index,
-          //       'sound': 'mawaqit_id',
-          //       'mosque': prayer.mosqueName,
-          //       'prayer': translatedPrayerName,
-          //       'time': prayer.notificationBeforeAthan.toString(),
-          //       'isPreNotification': true,
-          //       'minutesToAthan': minutesToAthan,
-          //       'notificationBeforeShuruq': 0,
-          //       'sound_type': prayer.soundType
-          //     });
+          AndroidAlarmManager.oneShotAt(preNotificationTime, int.parse(id), ringAlarm,
+              alarmClock: true,
+              allowWhileIdle: true,
+              exact: true,
+              wakeup: true,
+              rescheduleOnReboot: true,
+              params: {
+                'index': index,
+                'sound': 'mawaqit_id',
+                'mosque': prayer.mosqueName,
+                'prayer': translatedPrayerName,
+                'time': prayer.notificationBeforeAthan.toString(),
+                'isPreNotification': true,
+                'minutesToAthan': minutesToAthan,
+                'notificationBeforeShuruq': 0,
+                'sound_type': prayer.soundType
+              });
           print('Pre Notification scheduled for ${prayer.prayerName} at : $preNotificationTime Id: $id');
         } catch (e, t) {
           print(t);
