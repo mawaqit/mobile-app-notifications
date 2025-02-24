@@ -2,12 +2,9 @@
 
 library mobile_app_notifications;
 
-import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
-
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:intl/intl.dart';
@@ -18,8 +15,6 @@ import 'package:mobile_app_notifications/prayer_services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tzl;
 import 'package:timezone/timezone.dart' as tz;
-
-import 'models/notification/notification_info_model.dart';
 
 var flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
@@ -69,7 +64,9 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
 
     // Assign per-prayer channel ID
     String baseChannelId = prayer.toLowerCase(); // e.g., 'fajr', 'dhuhr'
-    String channelId = isPreNotification ? 'Pre $baseChannelId ' : '$baseChannelId Adhan';
+    String channelId = isPreNotification
+        ? 'Pre $baseChannelId '
+        : '$baseChannelId Adhan $sound';
 
     print(" ----- ------- -- - - - --- -channelId: $channelId");
     final AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
@@ -112,6 +109,20 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
   }
 }
 
+Future<void> deleteNotificationChannels() async {
+  final androidPlugin =
+      flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+
+  if (androidPlugin != null) {
+    final List channels = await androidPlugin.getNotificationChannels() ?? [];
+    for (var channel in channels) {
+      await androidPlugin.deleteNotificationChannel(channel.id);
+      print('🗑️ Deleted Channel: ${channel.id}');
+    }
+  }
+}
+
 class ScheduleAdhan {
   int getPrayerIndex(String prayer) {
     switch (prayer) {
@@ -148,38 +159,6 @@ class ScheduleAdhan {
     math.Random random = math.Random();
     return 10000000 + random.nextInt(90000000); // Ensures an 8-digit number
   }
-
-  Future<void> showSilentNotification({required String prayer, bool isPreNotification = false}) async {
-    String baseChannelId = prayer.toLowerCase(); // e.g., 'fajr', 'dhuhr'
-    String channelId = isPreNotification ? 'Pre $baseChannelId ' : '$baseChannelId Adhan';
-    print('Unique channel name  :  $channelId');
-
-    AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      channelId,
-      channelId,
-      channelDescription: isPreNotification ? 'Pre Adhan notifications for $prayer' : 'Adhan notifications for $prayer',
-      playSound: false,
-      // No sound
-      enableVibration: false,
-      // No vibration
-      importance: Importance.low,
-      // Low importance hides in the notification bar
-      priority: Priority.min,
-      // Min priority avoids showing in UI
-      visibility: NotificationVisibility.secret, // Hides from the status bar
-    );
-
-    NotificationDetails notificationDetails = NotificationDetails(android: androidDetails);
-    int id = generateSixDigitRandom();
-    print('notification id   :  $id');
-    await flutterLocalNotificationsPlugin.show(
-      id, // Notification ID
-      null, // No title
-      null, // No body
-      notificationDetails,
-    );
-  }
-
   Future<bool> checkIOSNotificationPermissions() async {
     final iosPlugin = flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
     final permissionStatus = await iosPlugin?.checkPermissions();
