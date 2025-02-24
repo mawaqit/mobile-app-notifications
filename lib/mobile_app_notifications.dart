@@ -4,6 +4,7 @@ library mobile_app_notifications;
 
 import 'dart:io';
 import 'dart:math' as math;
+
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
@@ -64,14 +65,13 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
 
     // Assign per-prayer channel ID
     String baseChannelId = prayer.toLowerCase(); // e.g., 'fajr', 'dhuhr'
-    String channelId = isPreNotification
-        ? 'Pre $baseChannelId '
-        : '$baseChannelId Adhan $sound';
+    String channelName = isPreNotification ? 'Pre $baseChannelId ' : '$baseChannelId Adhan';
+    String channelId = isPreNotification ? 'Pre $baseChannelId ' : '$baseChannelId Adhan $sound';
 
     print(" ----- ------- -- - - - --- -channelId: $channelId");
     final AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
       channelId,
-      channelId,
+      channelName,
       channelDescription: isPreNotification ? 'Pre Adhan notifications for $prayer' : 'Adhan notifications for $prayer',
       importance: Importance.max,
       priority: Priority.high,
@@ -79,8 +79,8 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       sound: isPreNotification
           ? null
           : soundType == SoundType.customSound
-              ? RawResourceAndroidNotificationSound(adhanSound)
-              : UriAndroidNotificationSound(adhanSound ?? ''),
+          ? RawResourceAndroidNotificationSound(adhanSound)
+          : UriAndroidNotificationSound(adhanSound ?? ''),
       enableVibration: true,
       largeIcon: const DrawableResourceAndroidBitmap('logo'),
       icon: 'logo',
@@ -100,7 +100,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       platformChannelSpecifics,
     );
 
-    ScheduleAdhan scheduleAdhan = ScheduleAdhan();
+    ScheduleAdhan scheduleAdhan = ScheduleAdhan.instance;
     scheduleAdhan.schedule();
   } catch (e, t) {
     print('an error occurs');
@@ -111,8 +111,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
 
 Future<void> deleteNotificationChannels() async {
   final androidPlugin =
-      flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+  flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
 
   if (androidPlugin != null) {
     final List channels = await androidPlugin.getNotificationChannels() ?? [];
@@ -124,6 +123,24 @@ Future<void> deleteNotificationChannels() async {
 }
 
 class ScheduleAdhan {
+  // Private constructor
+  ScheduleAdhan._privateConstructor() {
+    // Initialize the list only once when the singleton instance is created
+    print("Initializing newAlarmIds...");
+    newAlarmIds = [];
+    isScheduling = false;
+  }
+
+  // Singleton instance
+  static final ScheduleAdhan _instance = ScheduleAdhan._privateConstructor();
+
+  // Getter to access the single instance
+  static ScheduleAdhan get instance => _instance;
+
+  // The list that should be initialized only once
+  late List<String> newAlarmIds;
+  late bool isScheduling;
+
   int getPrayerIndex(String prayer) {
     switch (prayer) {
       case 'Fajr':
@@ -159,8 +176,10 @@ class ScheduleAdhan {
     math.Random random = math.Random();
     return 10000000 + random.nextInt(90000000); // Ensures an 8-digit number
   }
+
   Future<bool> checkIOSNotificationPermissions() async {
-    final iosPlugin = flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
+    final iosPlugin =
+    flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
     final permissionStatus = await iosPlugin?.checkPermissions();
     if (permissionStatus == null) {
       print('Could not get permission status');
@@ -170,7 +189,10 @@ class ScheduleAdhan {
       print('Alert: ${permissionStatus.isAlertEnabled}');
       print('Badge: ${permissionStatus.isBadgeEnabled}');
       print('Sound: ${permissionStatus.isSoundEnabled}');
-      return permissionStatus.isEnabled && permissionStatus.isAlertEnabled && permissionStatus.isBadgeEnabled && permissionStatus.isSoundEnabled;
+      return permissionStatus.isEnabled &&
+          permissionStatus.isAlertEnabled &&
+          permissionStatus.isBadgeEnabled &&
+          permissionStatus.isSoundEnabled;
     }
   }
 
@@ -182,21 +204,32 @@ class ScheduleAdhan {
     }
   }
 
+  flushAlarmIdList() {
+    newAlarmIds = [];
+  }
+
   scheduleAndroid() async {
     print('from schedule');
+
+    if (isScheduling) {
+      print('is scheduling');
+      return;
+    }
+    isScheduling = true;
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
     List<String> previousAlarms = prefs.getStringList('alarmIds') ?? [];
+
     for (String alarmId in previousAlarms) {
       int id = int.parse(alarmId);
       await AndroidAlarmManager.cancel(id);
       print('Cancelled Alarm Id: $id');
     }
+    flushAlarmIdList();
+    await prefs.remove('alarmIds');
     await prefs.setStringList('alarmIds', []);
 
     var prayersList = await PrayerService().getPrayers();
-
-    List<String> newAlarmIds = [];
 
     for (var i = 0; i < prayersList.length; i++) {
       var prayer = prayersList[i];
@@ -267,7 +300,8 @@ class ScheduleAdhan {
                 'notificationBeforeShuruq': notificationBeforeShuruq,
                 'sound_type': prayer.soundType
               });
-          print('Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
+          print(
+              'Sound ${prayer.sound} Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
           await prefs.setStringList('alarmIds', newAlarmIds);
         } catch (e, t) {
           print(t);
@@ -275,6 +309,7 @@ class ScheduleAdhan {
         }
       }
     }
+    isScheduling = false;
 
     print(newAlarmIds.toList());
   }
@@ -317,7 +352,8 @@ class ScheduleAdhan {
               prayer.mosqueName,
               null,
             );
-            print('Pre Notification scheduled for ${prayer.prayerName} at: $preNotificationTime Id: ${1 + prayer.alarmId}');
+            print(
+                'Pre Notification scheduled for ${prayer.prayerName} at: $preNotificationTime Id: ${1 + prayer.alarmId}');
             j++;
           }
 
@@ -373,7 +409,8 @@ class ScheduleAdhan {
       print('Error in scheduleIOS: $e');
       print('$s');
     }
-    List<PendingNotificationRequest> allPendingNotification = await flutterLocalNotificationsPlugin.pendingNotificationRequests();
+    List<PendingNotificationRequest> allPendingNotification =
+    await flutterLocalNotificationsPlugin.pendingNotificationRequests();
     print('All scheduling notifications length:  ${allPendingNotification.length}');
     for (var element in allPendingNotification) {
       print('element length:  ${element.title} , body: ${element.payload}');
@@ -399,10 +436,15 @@ class ScheduleAdhan {
   }
 
   Future<void> iosNotificationSchedular(int? id, DateTime date, String? title, String? body, String? soundId) async {
-    print('--------------------------------------------------schedule sound id : $soundId --------------------------------------------------');
+    print(
+        '--------------------------------------------------schedule sound id : $soundId --------------------------------------------------');
     try {
       final iOSPlatformChannelSpecifics = DarwinNotificationDetails(
-          sound: soundId == 'DEFAULT' ? null : soundId, presentSound: true, presentAlert: true, presentBadge: true, interruptionLevel: InterruptionLevel.critical);
+          sound: soundId == 'DEFAULT' ? null : soundId,
+          presentSound: true,
+          presentAlert: true,
+          presentBadge: true,
+          interruptionLevel: InterruptionLevel.critical);
 
       final platformChannelSpecifics = NotificationDetails(
         iOS: iOSPlatformChannelSpecifics,
