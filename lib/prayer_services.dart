@@ -201,8 +201,14 @@ class PrayerService {
     }
   }
 
+  // int generateUniqueIntId() {
+  //   var uuid = const Uuid().v4();
+  //   return int.parse(uuid.replaceAll('-', '').substring(0, 10), radix: 16);
+  // }
+
   int generateUniqueIntId() {
     var uuid = const Uuid().v4();
-    return int.parse(uuid.replaceAll('-', '').substring(0, 10), radix: 16);
+    var hash = utf8.encode(uuid).fold(0, (a, b) => a + b);
+    return hash & 0x7FFFFFFF; // Ensures it remains a 32-bit positive integer
   }
 }
