@@ -233,23 +233,24 @@ class ScheduleAdhan {
         var id = "1${prayer.alarmId}";
         newAlarmIds.add(id);
         try {
-          AndroidAlarmManager.oneShotAt(preNotificationTime, int.parse(id), ringAlarm,
-              alarmClock: true,
-              allowWhileIdle: true,
-              exact: true,
-              wakeup: true,
-              rescheduleOnReboot: true,
-              params: {
-                'index': index,
-                'sound': 'mawaqit_id',
-                'mosque': prayer.mosqueName,
-                'prayer': translatedPrayerName,
-                'time': prayer.notificationBeforeAthan.toString(),
-                'isPreNotification': true,
-                'minutesToAthan': minutesToAthan,
-                'notificationBeforeShuruq': 0,
-                'sound_type': prayer.soundType
-              });
+          //For pre notification
+          // AndroidAlarmManager.oneShotAt(preNotificationTime, int.parse(id), ringAlarm,
+          //     alarmClock: true,
+          //     allowWhileIdle: true,
+          //     exact: true,
+          //     wakeup: true,
+          //     rescheduleOnReboot: true,
+          //     params: {
+          //       'index': index,
+          //       'sound': 'mawaqit_id',
+          //       'mosque': prayer.mosqueName,
+          //       'prayer': translatedPrayerName,
+          //       'time': prayer.notificationBeforeAthan.toString(),
+          //       'isPreNotification': true,
+          //       'minutesToAthan': minutesToAthan,
+          //       'notificationBeforeShuruq': 0,
+          //       'sound_type': prayer.soundType
+          //     });
           print('Pre Notification scheduled for ${prayer.prayerName} at : $preNotificationTime Id: $id');
         } catch (e, t) {
           print(t);
@@ -271,6 +272,7 @@ class ScheduleAdhan {
       if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
         newAlarmIds.add(prayer.alarmId.toString());
         try {
+          //For actual prayer time
           AndroidAlarmManager.oneShotAt(notificationTime, prayer.alarmId, ringAlarm,
               alarmClock: true,
               allowWhileIdle: true,
