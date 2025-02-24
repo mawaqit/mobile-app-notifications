@@ -60,7 +60,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
     String baseChannelId = prayer.toLowerCase(); // e.g., 'fajr', 'dhuhr'
     String channelId = isPreNotification
         ? 'Pre $baseChannelId '
-        : '$baseChannelId Adhan';
+        : '$baseChannelId Adhan $sound';
 
     final AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
       channelId,
