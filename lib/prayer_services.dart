@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 import 'models/mosque/detailed_mosque.dart';
 import 'models/notification/notification_info_model.dart';
@@ -57,9 +58,10 @@ class PrayerService {
           var notificationData = await getPrayerDataByIndex(mosque, index);
           var prayerName = _getPrayerName(index);
 
-          String indexStr = index.toString(), dayStr = time!.day.toString(), monthStr = time.month.toString();
-          String str = indexStr + dayStr + monthStr;
-          int alarmId = int.parse(str);
+          // String indexStr = index.toString(), dayStr = time!.day.toString(), monthStr = time.month.toString();
+          // String str = indexStr + dayStr + monthStr;
+          // int alarmId = int.parse(str);
+          int alarmId = generateUniqueIntId();
           print('Alarm ID: $alarmId');
 
           NotificationInfoModel prayer = NotificationInfoModel(
@@ -197,5 +199,10 @@ class PrayerService {
     } catch (e) {
       return false;
     }
+  }
+
+  int generateUniqueIntId() {
+    var uuid = const Uuid().v4();
+    return int.parse(uuid.replaceAll('-', '').substring(0, 10), radix: 16);
   }
 }

@@ -63,13 +63,9 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
     print('adhan sound: $adhanSound');
     print('sound type from user: $soundType');
 
-    int uniqueId = generateUniqueIntId();
-
     // Assign per-prayer channel ID
     String baseChannelId = prayer.toLowerCase(); // e.g., 'fajr', 'dhuhr'
-    String channelId = isPreNotification
-        ? 'Pre $baseChannelId '
-        : '$baseChannelId Adhan $uniqueId';
+    String channelId = isPreNotification ? 'Pre $baseChannelId ' : '$baseChannelId Adhan';
 
     print(" ----- ------- -- - - - --- -channelId: $channelId");
     final AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
@@ -96,12 +92,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
 
     final NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
 
-    await flutterLocalNotificationsPlugin.show(
-      id,
-      notificationTitle,
-      mosque,
-      platformChannelSpecifics,
-    );
+    await flutterLocalNotificationsPlugin.show(id, notificationTitle, mosque, platformChannelSpecifics);
 
     ScheduleAdhan scheduleAdhan = ScheduleAdhan();
     scheduleAdhan.schedule();
@@ -112,15 +103,8 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
   }
 }
 
-int generateUniqueIntId() {
-  var uuid = const Uuid().v4();
-  return int.parse(uuid.replaceAll('-', '').substring(0, 10), radix: 16);
-}
-
 Future<void> deleteNotificationChannels() async {
-  final androidPlugin =
-      flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+  final androidPlugin = flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
 
   if (androidPlugin != null) {
     final List channels = await androidPlugin.getNotificationChannels() ?? [];
@@ -163,14 +147,6 @@ class ScheduleAdhan {
     'IMSAK_NOTIFICATION',
   ];
 
-  int generateSixDigitRandom() {
-    math.Random random = math.Random();
-    return 10000000 + random.nextInt(90000000); // Ensures an 8-digit number
-  }
-
-
-
-
   Future<bool> checkIOSNotificationPermissions() async {
     final iosPlugin = flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
     final permissionStatus = await iosPlugin?.checkPermissions();
@@ -199,6 +175,7 @@ class ScheduleAdhan {
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
     List<String> previousAlarms = prefs.getStringList('alarmIds') ?? [];
+
     for (String alarmId in previousAlarms) {
       int id = int.parse(alarmId);
       await AndroidAlarmManager.cancel(id);
