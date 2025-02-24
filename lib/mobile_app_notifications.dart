@@ -15,6 +15,7 @@ import 'package:mobile_app_notifications/prayer_services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tzl;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:uuid/uuid.dart';
 
 var flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
@@ -62,11 +63,13 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
     print('adhan sound: $adhanSound');
     print('sound type from user: $soundType');
 
+    int uniqueId = generateUniqueIntId();
+
     // Assign per-prayer channel ID
     String baseChannelId = prayer.toLowerCase(); // e.g., 'fajr', 'dhuhr'
     String channelId = isPreNotification
         ? 'Pre $baseChannelId '
-        : '$baseChannelId Adhan $sound';
+        : '$baseChannelId Adhan $uniqueId';
 
     print(" ----- ------- -- - - - --- -channelId: $channelId");
     final AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
@@ -107,6 +110,11 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
     print(t);
     print(e);
   }
+}
+
+int generateUniqueIntId() {
+  var uuid = const Uuid().v4();
+  return int.parse(uuid.replaceAll('-', '').substring(0, 10), radix: 16);
 }
 
 Future<void> deleteNotificationChannels() async {
@@ -159,6 +167,10 @@ class ScheduleAdhan {
     math.Random random = math.Random();
     return 10000000 + random.nextInt(90000000); // Ensures an 8-digit number
   }
+
+
+
+
   Future<bool> checkIOSNotificationPermissions() async {
     final iosPlugin = flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
     final permissionStatus = await iosPlugin?.checkPermissions();
