@@ -61,7 +61,7 @@ class PrayerService {
           // String indexStr = index.toString(), dayStr = time!.day.toString(), monthStr = time.month.toString();
           // String str = indexStr + dayStr + monthStr;
           // int alarmId = int.parse(str);
-          int alarmId = generateUniqueIntId();
+          int alarmId = generateAlarmId();
           print('Alarm ID: $alarmId');
 
           NotificationInfoModel prayer = NotificationInfoModel(
@@ -201,14 +201,17 @@ class PrayerService {
     }
   }
 
-  // int generateUniqueIntId() {
-  //   var uuid = const Uuid().v4();
-  //   return int.parse(uuid.replaceAll('-', '').substring(0, 10), radix: 16);
-  // }
 
-  int generateUniqueIntId() {
-    var uuid = const Uuid().v4();
-    var hash = utf8.encode(uuid).fold(0, (a, b) => a + b);
-    return hash & 0x7FFFFFFF; // Ensures it remains a 32-bit positive integer
+
+  int generateAlarmId() {
+    String uuidStr = Uuid().v4(); // Generate UUID
+    List<int> bytes = utf8.encode(uuidStr); // Convert to bytes
+    int hash = crc32(bytes); // Convert to a 32-bit integer
+    return hash.abs() & 0x7FFFFFFF; // Ensure it's within 32-bit positive range
   }
+
+  int crc32(List<int> data) {
+    return data.fold(0, (prev, byte) => (prev * 31 + byte) & 0xFFFFFFFF);
+  }
+
 }
