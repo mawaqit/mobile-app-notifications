@@ -43,10 +43,6 @@ class PrayerTimeFormat {
     try {
       format24 = await get24HoursFormatSetting();
       languageCode = await PrayersName().getLanguage();
-
-      print('Format24Hour : $format24');
-      print('appLanguage : $languageCode');
-
       if (!format24) {
         String timeIn12HourFormat = formatHour(prayerTime);
         String amOrPm = getAPM(prayerTime);

@@ -18,6 +18,10 @@ dependencies:
   flutter_local_notifications: 17.2.1
   flutter_timezone: 1.0.8
   timezone: 0.9.3
+  mawaqit_mobile_i18n:
+    git:
+      url: https://github.com/mawaqit/mawaqit-mobile-i18n.git
+      ref: main
 
 dev_dependencies:
   flutter_test:
