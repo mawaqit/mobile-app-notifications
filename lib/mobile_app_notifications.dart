@@ -150,11 +150,6 @@ class ScheduleAdhan {
     'IMSAK_NOTIFICATION',
   ];
 
-  int generateSixDigitRandom() {
-    math.Random random = math.Random();
-    return 10000000 + random.nextInt(90000000); // Ensures an 8-digit number
-  }
-
   Future<bool> checkIOSNotificationPermissions() async {
     final iosPlugin =
     flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
