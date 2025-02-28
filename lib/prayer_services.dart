@@ -3,8 +3,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
+import 'package:mawaqit_mobile_i18n/gen_l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'helpers/localization_helper.dart';
 import 'models/mosque/detailed_mosque.dart';
 import 'models/notification/notification_info_model.dart';
 import 'models/prayers/prayer_notification.dart';
@@ -55,7 +57,7 @@ class PrayerService {
 
           var time = getPrayerTime(mosque, key, time: DateTime.now().add(Duration(days: i)));
           var notificationData = await getPrayerDataByIndex(mosque, index);
-          var prayerName = _getPrayerName(index);
+          var prayerName = await _getPrayerName(index);
 
           String indexStr = index.toString(), dayStr = time!.day.toString(), monthStr = time.month.toString();
           String str = indexStr + dayStr + monthStr;
@@ -92,22 +94,23 @@ class PrayerService {
     return notificationData;
   }
 
-  String _getPrayerName(int index) {
+  Future<String> _getPrayerName(int index) async {
+    AppLocalizations localizations = await LocalizationHelper.getLocalization();
     switch (index) {
       case 0:
-        return 'Fajr';
+        return localizations.fajr;
       case 1:
-        return 'Shuruq';
+        return localizations.shuruq;
       case 2:
-        return 'Duhr';
+        return localizations.duhr;
       case 3:
-        return 'Asr';
+        return localizations.asr;
       case 4:
-        return 'Maghrib';
+        return localizations.maghrib;
       case 5:
-        return 'Isha';
+        return localizations.isha;
       case 6:
-        return 'Imsak';
+        return localizations.imsak;
       default:
         return 'Unknown';
     }

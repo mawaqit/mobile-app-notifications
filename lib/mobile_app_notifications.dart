@@ -235,7 +235,7 @@ class ScheduleAdhan {
       var prayer = prayersList[i];
       int index = getPrayerIndex(prayer.prayerName ?? '');
 
-      String translatedPrayerName = await PrayersName().getPrayerName(index);
+      // String translatedPrayerName = await PrayersName().getPrayerName(index);
       String minutesToAthan = await PrayersName().getStringText();
 
       //for Pre notification
@@ -255,7 +255,7 @@ class ScheduleAdhan {
                 'index': index,
                 'sound': 'mawaqit_id',
                 'mosque': prayer.mosqueName,
-                'prayer': translatedPrayerName,
+                'prayer': prayer.prayerName,
                 'time': prayer.notificationBeforeAthan.toString(),
                 'isPreNotification': true,
                 'minutesToAthan': minutesToAthan,
@@ -293,7 +293,7 @@ class ScheduleAdhan {
                 'index': index,
                 'sound': prayer.sound,
                 'mosque': prayer.mosqueName,
-                'prayer': translatedPrayerName,
+                'prayer': prayer.prayerName,
                 'time': prayerTime,
                 'isPreNotification': false,
                 'minutesToAthan': '',
