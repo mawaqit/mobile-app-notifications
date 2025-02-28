@@ -4,26 +4,26 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../helpers/localization_helper.dart';
 
 class PrayersName {
-  Future<String> getPrayerName(int index) async {
+  Future<int> getPrayerIndex(String prayer) async {
     AppLocalizations localizations = await LocalizationHelper.getLocalization();
 
-    switch (index) {
-      case 0:
-        return localizations.fajr;
-      case 1:
-        return localizations.shuruq;
-      case 2:
-        return localizations.duhr;
-      case 3:
-        return localizations.asr;
-      case 4:
-        return localizations.maghrib;
-      case 5:
-        return localizations.isha;
-      case 6:
-        return localizations.imsak;
+    switch (prayer) {
+      case var _ when prayer == localizations.fajr:
+        return 0;
+      case var _ when prayer == localizations.shuruq:
+        return 1;
+      case var _ when prayer == localizations.duhr:
+        return 2;
+      case var _ when prayer == localizations.asr:
+        return 3;
+      case var _ when prayer == localizations.maghrib:
+        return 4;
+      case var _ when prayer == localizations.isha:
+        return 5;
+      case var _ when prayer == localizations.imsak:
+        return 6;
       default:
-        return 'Unknown';
+        return 0;
     }
   }
 

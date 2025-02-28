@@ -22,7 +22,6 @@ var flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 @pragma('vm:entry-point')
 void ringAlarm(int id, Map<String, dynamic> data) async {
   print('from ringAlarm');
-  int index = data['index'];
   String sound = data['sound'];
   String mosque = data['mosque'];
   String prayer = data['prayer'];
@@ -141,27 +140,6 @@ class ScheduleAdhan {
   late List<String> newAlarmIds;
   late bool isScheduling;
 
-  int getPrayerIndex(String prayer) {
-    switch (prayer) {
-      case 'Fajr':
-        return 0;
-      case 'Duhr':
-        return 2;
-      case 'Asr':
-        return 3;
-      case 'Maghrib':
-        return 4;
-      case 'Isha':
-        return 5;
-      case 'Shuruq':
-        return 1;
-      case 'Imsak':
-        return 6;
-      default:
-        return 0;
-    }
-  }
-
   final prayerKeys = [
     'FAJR_NOTIFICATION',
     'SHURUQ_NOTIFICATION',
@@ -233,9 +211,8 @@ class ScheduleAdhan {
 
     for (var i = 0; i < prayersList.length; i++) {
       var prayer = prayersList[i];
-      int index = getPrayerIndex(prayer.prayerName ?? '');
+      int index = await PrayersName().getPrayerIndex(prayer.prayerName ?? '');
 
-      // String translatedPrayerName = await PrayersName().getPrayerName(index);
       String minutesToAthan = await PrayersName().getStringText();
 
       //for Pre notification
@@ -252,7 +229,6 @@ class ScheduleAdhan {
               wakeup: true,
               rescheduleOnReboot: true,
               params: {
-                'index': index,
                 'sound': 'mawaqit_id',
                 'mosque': prayer.mosqueName,
                 'prayer': prayer.prayerName,
@@ -331,10 +307,10 @@ class ScheduleAdhan {
         // Loop to schedule up to 63 notifications
         while (i < prayersList.length && j < 63) {
           var prayer = prayersList[i];
-          int index = getPrayerIndex(prayer.prayerName!);
+          int index = await PrayersName().getPrayerIndex(prayer.prayerName ?? '');
 
           // Fetch prayer translations and preset strings
-          String translatedPrayerName = await PrayersName().getPrayerName(index);
+          String translatedPrayerName = prayer.prayerName ?? 'Unknown';
           String minutesToAthan = await PrayersName().getStringText();
           String inText = await PrayersName().getInText();
           String minutes = await PrayersName().getMinutesText();
