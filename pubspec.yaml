@@ -10,13 +10,13 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  android_alarm_manager_plus: ^4.0.7
+  android_alarm_manager_plus: 4.0.2
 #  awesome_notifications: ^0.8.2
   intl:
-  shared_preferences: ^2.5.2
+  shared_preferences: 2.2.1
   json_annotation: 4.9.0
-  flutter_local_notifications: ^18.0.1
-  flutter_timezone: ^4.1.0
+  flutter_local_notifications: 17.2.1
+  flutter_timezone: 1.0.8
   timezone: 0.9.3
   mawaqit_mobile_i18n:
     git:
