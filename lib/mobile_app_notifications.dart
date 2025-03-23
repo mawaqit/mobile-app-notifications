@@ -84,7 +84,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       icon: 'logo',
       onlyAlertOnce: false,
       ticker: 'ticker',
-      audioAttributesUsage: AudioAttributesUsage.notificationRingtone, // Helps bypass silent mode
+      audioAttributesUsage: AudioAttributesUsage.alarm,
       visibility: NotificationVisibility.public,
       category: AndroidNotificationCategory.alarm,
     );
