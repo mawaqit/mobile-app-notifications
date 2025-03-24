@@ -8,6 +8,7 @@ import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:intl/intl.dart';
+import 'package:mobile_app_notifications/helpers/method_channel_repo.dart';
 import 'package:mobile_app_notifications/models/prayers/prayer_name.dart';
 import 'package:mobile_app_notifications/models/prayers/prayer_notification.dart';
 import 'package:mobile_app_notifications/models/prayers/prayer_time_format.dart';
@@ -36,17 +37,13 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
     String formattedTime = await PrayerTimeFormat().getFormattedPrayerTime(time);
 
     if (isPreNotification) {
-      print('for pre notification');
       notificationTitle = '$time $minutesToAthan $prayer';
     } else {
-      print('for adhan notification');
       if (notificationBeforeShuruq != 0) {
         String inText = await PrayersName().getInText();
         String minutes = await PrayersName().getMinutesText();
-        print('notificationBeforeShuruq : $notificationBeforeShuruq');
         notificationTitle = '$prayer $inText $notificationBeforeShuruq $minutes';
       } else {
-        print('notificationBeforeShuruq : $notificationBeforeShuruq');
         notificationTitle = '$prayer  $formattedTime';
       }
 
@@ -58,8 +55,8 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
         adhanSound = sound;
       }
     }
-    print('adhan sound: $adhanSound');
-    print('sound type from user: $soundType');
+
+    String mode = await MethodChannelRepo.checkDeviceMode();
 
     // Assign per-prayer channel ID
     String baseChannelId = prayer.toLowerCase(); // e.g., 'fajr', 'dhuhr'
@@ -74,7 +71,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       importance: Importance.max,
       priority: Priority.high,
       playSound: !isPreNotification,
-      sound: isPreNotification
+      sound: isPreNotification || (mode == DeviceRingtoneMode.silent.name || mode == DeviceRingtoneMode.vibrate.name)
           ? null
           : soundType == SoundType.customSound
               ? RawResourceAndroidNotificationSound(adhanSound)
