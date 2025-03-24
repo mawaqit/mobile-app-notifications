@@ -8,7 +8,7 @@ import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:intl/intl.dart';
-import 'package:mobile_app_notifications/helpers/method_channel_repo.dart';
+import 'package:mobile_app_notifications/helpers/device_ringtone_mode.dart';
 import 'package:mobile_app_notifications/models/prayers/prayer_name.dart';
 import 'package:mobile_app_notifications/models/prayers/prayer_notification.dart';
 import 'package:mobile_app_notifications/models/prayers/prayer_time_format.dart';
@@ -58,7 +58,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       }
     }
 
-    RingerModeStatus mode = await SoundMode.ringerModeStatus;
+    bool mute = await DeviceRingtoneMode.isLikelyVibrationMode();
 
     // Assign per-prayer channel ID
     String baseChannelId = prayer.toLowerCase(); // e.g., 'fajr', 'dhuhr'
@@ -73,7 +73,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       importance: Importance.max,
       priority: Priority.high,
       playSound: !isPreNotification,
-      sound: isPreNotification || (mode == RingerModeStatus.vibrate || mode == RingerModeStatus.silent)
+      sound: isPreNotification || (mute)
           ? null
           : soundType == SoundType.customSound
               ? RawResourceAndroidNotificationSound(adhanSound)
