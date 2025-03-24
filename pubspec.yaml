@@ -17,6 +17,7 @@ dependencies:
   json_annotation: 4.9.0
   flutter_local_notifications: ^18.0.1
   flutter_timezone: ^4.1.0
+  sound_mode: ^3.0.0
   timezone: 0.9.3
   mawaqit_mobile_i18n:
     git:
