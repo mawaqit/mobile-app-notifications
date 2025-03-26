@@ -17,7 +17,10 @@ dependencies:
   json_annotation: 4.9.0
   flutter_local_notifications: ^18.0.1
   flutter_timezone: ^4.1.0
-  volume_controller: ^3.3.2
+  sound_mode:
+    git:
+      url: https://github.com/SameeHsn/sound_mode.git
+      ref: main
   timezone: 0.9.3
   mawaqit_mobile_i18n:
     git:

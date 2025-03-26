@@ -56,7 +56,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       }
     }
 
-    bool mute = await DeviceRingtoneMode.isLikelyVibrationMode();
+    bool mute = await DeviceRingtoneMode.isMuted();
 
     print('is mute: $mute');
 

@@ -1,13 +1,13 @@
 import 'package:flutter/services.dart';
-import 'package:volume_controller/volume_controller.dart';
+import 'package:sound_mode/sound_mode.dart';
+import 'package:sound_mode/utils/ringer_mode_statuses.dart';
 
 class DeviceRingtoneMode {
 // We'll use a heuristic based on volume changes
-  static Future<bool> isLikelyVibrationMode() async {
+  static Future<bool> isMuted() async {
     try {
-      VolumeController volumeController = VolumeController.instance;
-      bool isMuted = await volumeController.isMuted();
-      return isMuted;
+      RingerModeStatus ringerStatus = await SoundMode.ringerModeStatus;
+      return ringerStatus == RingerModeStatus.vibrate || ringerStatus == RingerModeStatus.silent;
     } catch (e) {
       print('Error checking vibration: $e');
       return false;
