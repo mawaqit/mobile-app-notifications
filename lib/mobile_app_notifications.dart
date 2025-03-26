@@ -72,7 +72,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       channelDescription: isPreNotification ? 'Pre Adhan notifications for $prayer' : 'Adhan notifications for $prayer',
       importance: Importance.max,
       priority: Priority.high,
-      playSound: !isPreNotification || mute,
+      playSound: !isPreNotification || !mute,
       sound: isPreNotification || (mute)
           ? null
           : soundType == SoundType.customSound
