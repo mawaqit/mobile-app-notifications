@@ -58,6 +58,8 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
 
     bool mute = await DeviceRingtoneMode.isLikelyVibrationMode();
 
+    print('is mute: $mute');
+
     // Assign per-prayer channel ID
     String baseChannelId = prayer.toLowerCase(); // e.g., 'fajr', 'dhuhr'
     String channelName = isPreNotification ? 'Pre $baseChannelId ' : '$baseChannelId Adhan';
