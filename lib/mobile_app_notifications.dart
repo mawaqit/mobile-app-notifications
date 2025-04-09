@@ -67,17 +67,19 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
 
     print(" ----- ------- -- - - - --- -channelId: $channelId");
     final AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
-      mute? 'Silent $channelId' : channelId,
-      mute? 'Silent $channelName' : channelName,
+      mute ? 'Silent $channelId' : channelId,
+      mute ? 'Silent $channelName' : channelName,
       channelDescription: isPreNotification ? 'Pre Adhan notifications for $prayer' : 'Adhan notifications for $prayer',
       importance: Importance.max,
       priority: Priority.high,
       playSound: !isPreNotification || !mute,
-      sound: isPreNotification || (mute)
-          ? null
-          : soundType == SoundType.customSound
-              ? RawResourceAndroidNotificationSound(adhanSound)
-              : UriAndroidNotificationSound(adhanSound ?? ''),
+      sound: (mute)
+          ? const RawResourceAndroidNotificationSound('silent_sound')
+          : isPreNotification
+              ? null
+              : soundType == SoundType.customSound
+                  ? RawResourceAndroidNotificationSound(adhanSound)
+                  : UriAndroidNotificationSound(adhanSound ?? ''),
       enableVibration: true,
       largeIcon: const DrawableResourceAndroidBitmap('logo'),
       icon: 'logo',
