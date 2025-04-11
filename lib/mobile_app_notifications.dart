@@ -67,7 +67,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
 
     print(" ----- ------- -- - - - --- -channelId: $channelId");
     final AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
-      mute ? 'Silent' : channelId,
+      mute ? 'Silent $channelId' : channelId,
       mute ? 'Silent' : channelName,
       channelDescription: isPreNotification ? 'Pre Adhan notifications for $prayer' : 'Adhan notifications for $prayer',
       importance: Importance.max,
