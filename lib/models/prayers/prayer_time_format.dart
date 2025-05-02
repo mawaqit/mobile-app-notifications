@@ -2,12 +2,13 @@ import 'package:mobile_app_notifications/models/prayers/prayer_name.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PrayerTimeFormat {
-  static const settings24HoursFormat = '24_HOURS_FORMAT_SETTINGS';
+  String settings24HoursFormat = '24_HOURS_FORMAT_SETTINGS';
   String languageCode = "en";
   bool format24 = true;
 
-  static Future<bool> get24HoursFormatSetting() async {
+  Future<bool> get24HoursFormatSetting() async {
     final db = await SharedPreferences.getInstance();
+    db.reload();
     return db.getBool(settings24HoursFormat) ?? true;
   }
 
