@@ -30,12 +30,13 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
   bool isPreNotification = data['isPreNotification'];
   String minutesToAthan = data['minutesToAthan'];
   int notificationBeforeShuruq = data['notificationBeforeShuruq'];
+  String appLanguage = data['appLanguage'] ?? 'en';
+  bool is24HourFormat = data['is24HourFormat'] ?? true;
+
 
   String? adhanSound;
   String notificationTitle;
   try {
-    String formattedTime = await PrayerTimeFormat().getFormattedPrayerTime(time);
-
     if (isPreNotification) {
       notificationTitle = '$time $minutesToAthan $prayer';
     } else {
@@ -44,6 +45,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
         String minutes = await PrayersName().getMinutesText();
         notificationTitle = '$prayer $inText $notificationBeforeShuruq $minutes';
       } else {
+        String formattedTime = PrayerTimeFormat().getFormattedPrayerTime(prayerTime: time, timeFormat: is24HourFormat, selectedLanguage: appLanguage);
         notificationTitle = '$prayer  $formattedTime';
       }
 
@@ -152,7 +154,6 @@ class ScheduleAdhan {
 
   scheduleAndroid() async {
     print('from schedule');
-
     if (isScheduling) {
       print("Scheduling in progress, please wait until it's completed...");
       return;
@@ -177,7 +178,10 @@ class ScheduleAdhan {
       var prayer = prayersList[i];
 
       String minutesToAthan = await PrayersName().getStringText();
-
+      //Fetch App Language
+      String appLanguage = await PrayersName().getLanguage();
+      //Fetch App time format
+      bool is24HourFormat = await PrayerTimeFormat().get24HoursFormatSetting();
       //for Pre notification
       var preNotificationTime = prayer.time!.subtract(Duration(minutes: prayer.notificationBeforeAthan));
 
@@ -199,7 +203,9 @@ class ScheduleAdhan {
                 'isPreNotification': true,
                 'minutesToAthan': minutesToAthan,
                 'notificationBeforeShuruq': 0,
-                'sound_type': prayer.soundType
+                'sound_type': prayer.soundType,
+                'appLanguage': appLanguage,
+                'is24HourFormat': is24HourFormat
               });
           print('Pre Notification scheduled for ${prayer.prayerName} at : $preNotificationTime Id: $id');
         } catch (e, t) {
@@ -221,6 +227,7 @@ class ScheduleAdhan {
         notificationTime = prayer.time!;
         notificationBeforeShuruq = 0;
       }
+
       if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
         newAlarmIds.add(prayer.alarmId.toString());
         try {
@@ -239,7 +246,9 @@ class ScheduleAdhan {
                 'isPreNotification': false,
                 'minutesToAthan': '',
                 'notificationBeforeShuruq': notificationBeforeShuruq,
-                'sound_type': prayer.soundType
+                'sound_type': prayer.soundType,
+                'appLanguage': appLanguage,
+                'is24HourFormat': is24HourFormat
               });
           print('Sound ${prayer.sound} Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
           await prefs.setStringList('alarmIds', newAlarmIds);
@@ -299,7 +308,12 @@ class ScheduleAdhan {
           // Main Athan notification logic
           String prayerTime = DateFormat('HH:mm').format(prayer.time!);
           DateTime notificationTime = prayer.time!;
-          String formatedPrayerTime = await PrayerTimeFormat().getFormattedPrayerTime(prayerTime);
+          //Fetch App Language
+          String languageCode = await PrayersName().getLanguage();
+          //Fetch App time format
+          bool is24HourFormat = await PrayerTimeFormat().get24HoursFormatSetting();
+          // Make notification time on the base of TIME FORMAT and SELECTED LANGUAGE from APP
+          String formatedPrayerTime = PrayerTimeFormat().getFormattedPrayerTime(prayerTime: prayerTime, timeFormat: is24HourFormat, selectedLanguage: languageCode);
           String notificationTitle = '$translatedPrayerName $formatedPrayerTime';
           int notificationBeforeShuruq;
 
