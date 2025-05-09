@@ -1,20 +1,11 @@
-import 'package:mobile_app_notifications/models/prayers/prayer_name.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PrayerTimeFormat {
-  static const settings24HoursFormat = '24_HOURS_FORMAT_SETTINGS';
-  String languageCode = "en";
-  bool format24 = true;
+  String settings24HoursFormat = '24_HOURS_FORMAT_SETTINGS';
 
-  static Future<bool> get24HoursFormatSetting() async {
-    final db = await SharedPreferences.getInstance();
-    return db.getBool(settings24HoursFormat) ?? true;
-  }
-
-  String formatHour(String? value) {
-    if (value == null) return '';
-    if (format24) return value;
-    var d = value.split(':');
+  String formatHour(String? time) {
+    if (time == null) return '';
+    var d = time.split(':');
     int modulo = 12;
     if (d[0] == '12') modulo = 13;
     String h = (int.parse(d[0]) % modulo).toString();
@@ -22,10 +13,9 @@ class PrayerTimeFormat {
     return '$h:$m';
   }
 
-  String getAPM(String? value) {
-    if (value == null) return '';
-    if (format24) return '';
-    var d = value.split(':');
+  String getAPM({String? time, required String languageCode}) {
+    if (time == null) return '';
+    var d = time.split(':');
     int h = int.parse(d[0]);
     if (h >= 12) {
       if (languageCode == 'ar') {
@@ -39,19 +29,25 @@ class PrayerTimeFormat {
     return 'AM';
   }
 
-  Future<String> getFormattedPrayerTime(String prayerTime) async {
+  String getFormattedPrayerTime({required String prayerTime, required bool timeFormat, required String selectedLanguage}) {
     try {
-      format24 = await get24HoursFormatSetting();
-      languageCode = await PrayersName().getLanguage();
-      if (!format24) {
+      if (!timeFormat) {
         String timeIn12HourFormat = formatHour(prayerTime);
-        String amOrPm = getAPM(prayerTime);
-        return "$timeIn12HourFormat $amOrPm";
+        String amOrPm = getAPM(time: prayerTime, languageCode: selectedLanguage);
+        if (timeIn12HourFormat.isNotEmpty && amOrPm.isNotEmpty) {
+          return "$timeIn12HourFormat $amOrPm";
+        }
       }
     } catch (e) {
       print("Exception in getFormattedPrayerTime: $e");
     }
-
     return prayerTime;
+  }
+
+  Future<bool> get24HoursFormatSetting() async {
+    final db = await SharedPreferences.getInstance();
+    db.reload();
+    bool format24 = db.getBool(settings24HoursFormat) ?? true;
+    return format24;
   }
 }
