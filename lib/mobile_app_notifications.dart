@@ -87,8 +87,6 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
         audioAttributesUsage: AudioAttributesUsage.alarm,
         visibility: NotificationVisibility.public,
         category: AndroidNotificationCategory.alarm,
-        colorized: true,
-        color: const Color(0xff490094),
     );
 
     final NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
