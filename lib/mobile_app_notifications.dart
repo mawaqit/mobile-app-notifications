@@ -3,7 +3,7 @@
 library mobile_app_notifications;
 
 import 'dart:io';
-
+import 'package:flutter/material.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
@@ -32,7 +32,6 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
   int notificationBeforeShuruq = data['notificationBeforeShuruq'];
   String appLanguage = data['appLanguage'] ?? 'en';
   bool is24HourFormat = data['is24HourFormat'] ?? true;
-
 
   String? adhanSound;
   String notificationTitle;
@@ -68,28 +67,26 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
     String channelId = isPreNotification ? 'Pre $baseChannelId ' : '$baseChannelId Adhan $sound';
 
     print(" ----- ------- -- - - - --- -channelId: $channelId");
-    final AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
-      mute ? 'Silent $channelId' : channelId,
-      mute ? 'Silent' : channelName,
-      channelDescription: isPreNotification ? 'Pre Adhan notifications for $prayer' : 'Adhan notifications for $prayer',
-      importance: Importance.max,
-      priority: Priority.high,
-      playSound: !isPreNotification || !mute,
-      sound: (mute)
-          ? const RawResourceAndroidNotificationSound('silent_sound')
-          : isPreNotification
-              ? null
-              : soundType == SoundType.customSound
-                  ? RawResourceAndroidNotificationSound(adhanSound)
-                  : UriAndroidNotificationSound(adhanSound ?? ''),
-      enableVibration: true,
-      largeIcon: const DrawableResourceAndroidBitmap('logo'),
-      icon: 'logo',
-      onlyAlertOnce: false,
-      ticker: 'ticker',
-      audioAttributesUsage: AudioAttributesUsage.alarm,
-      visibility: NotificationVisibility.public,
-      category: AndroidNotificationCategory.alarm,
+    final AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(mute ? 'Silent $channelId' : channelId, mute ? 'Silent' : channelName,
+        channelDescription: isPreNotification ? 'Pre Adhan notifications for $prayer' : 'Adhan notifications for $prayer',
+        importance: Importance.max,
+        priority: Priority.high,
+        playSound: !isPreNotification || !mute,
+        sound: (mute)
+            ? const RawResourceAndroidNotificationSound('silent_sound')
+            : isPreNotification
+                ? null
+                : soundType == SoundType.customSound
+                    ? RawResourceAndroidNotificationSound(adhanSound)
+                    : UriAndroidNotificationSound(adhanSound ?? ''),
+        enableVibration: true,
+        largeIcon: const DrawableResourceAndroidBitmap('logo'),
+        icon: 'notification_icon',
+        onlyAlertOnce: false,
+        ticker: 'ticker',
+        audioAttributesUsage: AudioAttributesUsage.alarm,
+        visibility: NotificationVisibility.public,
+        category: AndroidNotificationCategory.alarm,
     );
 
     final NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
