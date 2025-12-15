@@ -23,6 +23,14 @@ var flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 @pragma('vm:entry-point')
 void ringAlarm(int id, Map<String, dynamic> data) async {
   print('from ringAlarm');
+
+  // Check if notification is stale (time was manually changed forward)
+  String? scheduledTime = data['scheduledTime'];
+  if (!NotificationFreshnessChecker.isFresh(scheduledTime)) {
+    await ScheduleThrottleHelper.removeFiredAlarm(id);
+    return; // Skip stale notification
+  }
+
   String sound = data['sound'];
   String mosque = data['mosque'];
   String prayer = data['prayer'];
@@ -100,7 +108,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
     );
 
     // Remove this fired alarm from the stored list
-    await ScheduleThrottleHelper.removeFiredalarm(id);
+    await ScheduleThrottleHelper.removeFiredAlarm(id);
 
     // Only reschedule if needed (throttled to prevent alarm accumulation)
     ScheduleAdhan scheduleAdhan = ScheduleAdhan.instance;
@@ -473,24 +481,9 @@ class ScheduleAdhan {
   }
 
   /// Cancels alarms created with the old buggy ID format
-  /// This handles migration from the previous collision-prone system
+  /// Optimized: ~5,200 parallel calls instead of 140,000 sequential
   Future<void> _cancelLegacyAlarms() async {
-    // Old format: indexStr + dayStr + monthStr (e.g., "0112", "1231")
-    // Range of possible values: roughly 0 to 63112
-
-    // Cancel a range of legacy IDs
-    for (int legacyId = 0; legacyId <= 70000; legacyId += 1) {
-      // Skip IDs that look like our new format (>= 202400000)
-      if (legacyId >= 202400000) continue;
-
-      try {
-        await AndroidAlarmManager.cancel(legacyId);
-        // Also cancel with "1" prefix (old pre-notification format)
-        await AndroidAlarmManager.cancel(int.parse('1$legacyId'));
-      } catch (e) {
-        // Ignore - most won't exist
-      }
-    }
+    await LegacyAlarmCleaner.cancelAll();
   }
 
   /// Schedule pre-notification for a prayer
@@ -531,6 +524,7 @@ class ScheduleAdhan {
           'sound_type': prayer.soundType,
           'appLanguage': appLanguage,
           'is24HourFormat': is24HourFormat,
+          'scheduledTime': preNotificationTime.toIso8601String(),
         },
       );
       print('Pre Notification scheduled for ${prayer.prayerName} at: $preNotificationTime Id: $preId');
@@ -585,6 +579,7 @@ class ScheduleAdhan {
           'sound_type': prayer.soundType,
           'appLanguage': appLanguage,
           'is24HourFormat': is24HourFormat,
+          'scheduledTime': notificationTime.toIso8601String(),
         },
       );
       print('Notification scheduled for ${prayer.prayerName} at: $notificationTime Id: ${prayer.alarmId}');
