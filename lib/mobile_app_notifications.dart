@@ -8,6 +8,7 @@ import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:intl/intl.dart';
+import 'package:mobile_app_notifications/helpers/alarm_manager_helper.dart';
 import 'package:mobile_app_notifications/helpers/device_ringtone_mode.dart';
 import 'package:mobile_app_notifications/models/prayers/prayer_name.dart';
 import 'package:mobile_app_notifications/models/prayers/prayer_notification.dart';
@@ -98,8 +99,12 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       platformChannelSpecifics,
     );
 
+    // Remove this fired alarm from the stored list
+    await ScheduleThrottleHelper.removeFiredalarm(id);
+
+    // Only reschedule if needed (throttled to prevent alarm accumulation)
     ScheduleAdhan scheduleAdhan = ScheduleAdhan.instance;
-    scheduleAdhan.schedule();
+    await scheduleAdhan.scheduleIfNeeded();
   } catch (e, t) {
     print('an error occurs');
     print(t);
@@ -123,6 +128,9 @@ class ScheduleAdhan {
   // The list that should be initialized only once
   late List<String> newAlarmIds;
   late bool isScheduling;
+
+  // Track if reschedule was requested during scheduling
+  bool _pendingReschedule = false;
 
   Future<bool> checkIOSNotificationPermissions() async {
     final iosPlugin = flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
@@ -152,112 +160,119 @@ class ScheduleAdhan {
   scheduleAndroid() async {
     print('from schedule');
     if (isScheduling) {
-      print("Scheduling in progress, please wait until it's completed...");
+      print("Scheduling in progress, will retry after completion...");
+      _pendingReschedule = true;  // Mark for retry instead of dropping
       return;
     }
+
     isScheduling = true;
-    SharedPreferences prefs = await SharedPreferences.getInstance();
 
-    List<String> previousAlarms = prefs.getStringList('alarmIds') ?? [];
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
 
-    for (String alarmId in previousAlarms) {
-      int id = int.parse(alarmId);
-      await AndroidAlarmManager.cancel(id);
-      print('Cancelled Alarm Id: $id');
-    }
-    flushAlarmIdList();
-    await prefs.remove('alarmIds');
-    await prefs.setStringList('alarmIds', []);
+      // Cancel previous alarms with comprehensive cleanup
+      List<String> previousAlarms = prefs.getStringList('alarmIds') ?? [];
+      print('Cancelling ${previousAlarms.length} stored alarms...');
 
-    var prayersList = await PrayerService().getPrayers();
+      for (String alarmId in previousAlarms) {
+        try {
+          int id = int.parse(alarmId);
+          await AndroidAlarmManager.cancel(id);
+        } catch (e) {
+          print('Error cancelling alarm $alarmId: $e');
+        }
+      }
 
-    for (var i = 0; i < prayersList.length; i++) {
-      var prayer = prayersList[i];
+      // Cancel orphan alarms
+      await _cancelOrphanAlarms();
 
+      // Clear stored list
+      flushAlarmIdList();
+      await prefs.remove('alarmIds');
+
+      // Fetch prayers
+      var prayersList = await PrayerService().getPrayers();
+
+      if (prayersList.isEmpty) {
+        print('No prayers to schedule');
+        return;
+      }
+
+      // Fetch settings ONCE before loop
       String minutesToAthan = await PrayersName().getStringText();
-      //Fetch App Language
       String appLanguage = await PrayersName().getLanguage();
-      //Fetch App time format
       bool is24HourFormat = await PrayerTimeFormat().get24HoursFormatSetting();
-      //for Pre notification
-      var preNotificationTime = prayer.time!.subtract(Duration(minutes: prayer.notificationBeforeAthan));
 
-      if (prayer.notificationBeforeAthan != 0 && preNotificationTime.isAfter(DateTime.now())) {
-        var id = "1${prayer.alarmId}";
-        newAlarmIds.add(id);
+      // Schedule each prayer
+      for (var i = 0; i < prayersList.length; i++) {
+        var prayer = prayersList[i];
+
         try {
-          AndroidAlarmManager.oneShotAt(preNotificationTime, int.parse(id), ringAlarm,
-              alarmClock: true,
-              allowWhileIdle: true,
-              exact: true,
-              wakeup: true,
-              rescheduleOnReboot: true,
-              params: {
-                'sound': 'mawaqit_id',
-                'mosque': prayer.mosqueName,
-                'prayer': prayer.prayerName,
-                'time': prayer.notificationBeforeAthan.toString(),
-                'isPreNotification': true,
-                'minutesToAthan': minutesToAthan,
-                'notificationBeforeShuruq': 0,
-                'sound_type': prayer.soundType,
-                'appLanguage': appLanguage,
-                'is24HourFormat': is24HourFormat
-              });
-          print('Pre Notification scheduled for ${prayer.prayerName} at : $preNotificationTime Id: $id');
-        } catch (e, t) {
-          print(t);
-          print(e);
+          await _schedulePreNotification(prayer, prefs, minutesToAthan, appLanguage, is24HourFormat);
+          await _scheduleMainNotification(prayer, prefs, appLanguage, is24HourFormat);
+        } catch (e, stackTrace) {
+          print('Error scheduling ${prayer.prayerName}: $e');
+          print(stackTrace);
+
+          // Check if we hit the 500 limit
+          if (e.toString().contains('Maximum limit of concurrent alarms')) {
+            print('CRITICAL: Hit 500 alarm limit. Attempting emergency cleanup...');
+            await _emergencyAlarmCleanup();
+            // Don't continue scheduling - let next cycle retry
+            break;
+          }
         }
       }
-      //for Adhan notification
-      String prayerTime = DateFormat('HH:mm').format(prayer.time!);
-      DateTime notificationTime;
-      int notificationBeforeShuruq;
 
-      int index = await PrayersName().getPrayerIndex(prayer.prayerName ?? '');
-      if (index == 1) {
-        notificationBeforeShuruq = prefs.getInt('notificationBeforeShuruq') ?? 0;
+      // Save the new alarm IDs
+      await prefs.setStringList('alarmIds', newAlarmIds);
+      print('Scheduled ${newAlarmIds.length} alarms: $newAlarmIds');
 
-        notificationTime = prayer.time!.subtract(Duration(minutes: notificationBeforeShuruq));
-      } else {
-        notificationTime = prayer.time!;
-        notificationBeforeShuruq = 0;
+    } catch (e, stackTrace) {
+      print('Critical error in scheduleAndroid: $e');
+      print(stackTrace);
+      // Report to Sentry/Crashlytics here
+    } finally {
+      isScheduling = false;
+
+      // Check if another schedule was requested while we were busy
+      if (_pendingReschedule) {
+        _pendingReschedule = false;
+        // Add small delay to prevent tight loop
+        await Future.delayed(Duration(milliseconds: 500));
+        schedule();
       }
+    }
+  }
 
-      if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
-        newAlarmIds.add(prayer.alarmId.toString());
-        try {
-          AndroidAlarmManager.oneShotAt(notificationTime, prayer.alarmId, ringAlarm,
-              alarmClock: true,
-              allowWhileIdle: true,
-              exact: true,
-              wakeup: true,
-              rescheduleOnReboot: true,
-              params: {
-                'index': index,
-                'sound': prayer.sound,
-                'mosque': prayer.mosqueName,
-                'prayer': prayer.prayerName,
-                'time': prayerTime,
-                'isPreNotification': false,
-                'minutesToAthan': '',
-                'notificationBeforeShuruq': notificationBeforeShuruq,
-                'sound_type': prayer.soundType,
-                'appLanguage': appLanguage,
-                'is24HourFormat': is24HourFormat
-              });
-          print('Sound ${prayer.sound} Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
-          await prefs.setStringList('alarmIds', newAlarmIds);
-        } catch (e, t) {
-          print(t);
-          print(e);
+  /// Emergency cleanup when 500 limit is reached
+  Future<void> _emergencyAlarmCleanup() async {
+    print('Starting emergency alarm cleanup...');
+
+    // Cancel ALL possible alarm IDs in our ID space
+    // New format range: 202401010 to 202512316 (current year)
+    int currentYear = DateTime.now().year;
+
+    for (int month = 1; month <= 12; month++) {
+      for (int day = 1; day <= 31; day++) {
+        for (int prayer = 0; prayer <= 6; prayer++) {
+          int alarmId = currentYear * 100000 + month * 1000 + day * 10 + prayer;
+          int preAlarmId = 1000000000 + alarmId;
+
+          try {
+            await AndroidAlarmManager.cancel(alarmId);
+            await AndroidAlarmManager.cancel(preAlarmId);
+          } catch (e) {
+            // Continue cleanup even if individual cancel fails
+          }
         }
       }
     }
-    isScheduling = false;
 
-    print(newAlarmIds.toList());
+    // Also clean legacy IDs
+    await _cancelLegacyAlarms();
+
+    print('Emergency cleanup complete');
   }
 
   scheduleIOS() async {
@@ -417,5 +432,196 @@ class ScheduleAdhan {
       print('ERROR: $e');
       print('stack trace: $s');
     }
+  }
+
+  /// Cancels potential orphan alarms from the past 7 days
+  /// This is a recovery mechanism for alarms that weren't properly tracked
+  Future<void> _cancelOrphanAlarms() async {
+    print('Scanning for orphan alarms...');
+    int cancelledCount = 0;
+
+    // Check past 7 days and next 7 days
+    for (int dayOffset = -7; dayOffset <= 7; dayOffset++) {
+      DateTime date = DateTime.now().add(Duration(days: dayOffset));
+
+      // For each prayer (0-6)
+      for (int prayerIndex = 0; prayerIndex <= 6; prayerIndex++) {
+        // Generate the expected alarm ID for this date/prayer
+        int alarmId = date.year * 100000 + date.month * 1000 + date.day * 10 + prayerIndex;
+        int preAlarmId = 1000000000 + alarmId;
+
+        try {
+          await AndroidAlarmManager.cancel(alarmId);
+          await AndroidAlarmManager.cancel(preAlarmId);
+          cancelledCount += 2;
+        } catch (e) {
+          // Ignore errors - alarm may not exist
+        }
+      }
+    }
+
+    // Only cancel legacy format IDs if NOT migrated yet
+    // After migration, no legacy alarms exist - skip 70,000 iterations
+    bool migrated = await AlarmMigrationHelper.isMigrated();
+    if (!migrated) {
+      print('Not migrated yet - cleaning legacy alarms...');
+      await _cancelLegacyAlarms();
+      await AlarmMigrationHelper.markMigrated();
+    }
+
+    print('Orphan alarm scan complete. Attempted to cancel $cancelledCount potential alarms.');
+  }
+
+  /// Cancels alarms created with the old buggy ID format
+  /// This handles migration from the previous collision-prone system
+  Future<void> _cancelLegacyAlarms() async {
+    // Old format: indexStr + dayStr + monthStr (e.g., "0112", "1231")
+    // Range of possible values: roughly 0 to 63112
+
+    // Cancel a range of legacy IDs
+    for (int legacyId = 0; legacyId <= 70000; legacyId += 1) {
+      // Skip IDs that look like our new format (>= 202400000)
+      if (legacyId >= 202400000) continue;
+
+      try {
+        await AndroidAlarmManager.cancel(legacyId);
+        // Also cancel with "1" prefix (old pre-notification format)
+        await AndroidAlarmManager.cancel(int.parse('1$legacyId'));
+      } catch (e) {
+        // Ignore - most won't exist
+      }
+    }
+  }
+
+  /// Schedule pre-notification for a prayer
+  Future<void> _schedulePreNotification(
+    dynamic prayer,
+    SharedPreferences prefs,
+    String minutesToAthan,
+    String appLanguage,
+    bool is24HourFormat,
+  ) async {
+    var preNotificationTime = prayer.time!.subtract(
+      Duration(minutes: prayer.notificationBeforeAthan),
+    );
+
+    if (prayer.notificationBeforeAthan != 0 &&
+        preNotificationTime.isAfter(DateTime.now())) {
+      // Generate pre-notification ID using new format
+      int preId = AlarmIdGenerator.generatePreNotification(prayer.alarmId);
+      newAlarmIds.add(preId.toString());
+
+      await AndroidAlarmManager.oneShotAt(
+        preNotificationTime,
+        preId,
+        ringAlarm,
+        alarmClock: true,
+        allowWhileIdle: true,
+        exact: true,
+        wakeup: true,
+        rescheduleOnReboot: true,
+        params: {
+          'sound': 'mawaqit_id',
+          'mosque': prayer.mosqueName,
+          'prayer': prayer.prayerName,
+          'time': prayer.notificationBeforeAthan.toString(),
+          'isPreNotification': true,
+          'minutesToAthan': minutesToAthan,
+          'notificationBeforeShuruq': 0,
+          'sound_type': prayer.soundType,
+          'appLanguage': appLanguage,
+          'is24HourFormat': is24HourFormat,
+        },
+      );
+      print('Pre Notification scheduled for ${prayer.prayerName} at: $preNotificationTime Id: $preId');
+    }
+  }
+
+  /// Schedule main notification for a prayer
+  Future<void> _scheduleMainNotification(
+    dynamic prayer,
+    SharedPreferences prefs,
+    String appLanguage,
+    bool is24HourFormat,
+  ) async {
+    String prayerTime = DateFormat('HH:mm').format(prayer.time!);
+    DateTime notificationTime;
+    int notificationBeforeShuruq;
+
+    int index = await PrayersName().getPrayerIndex(prayer.prayerName ?? '');
+
+    if (index == 1) {
+      // Shuruq
+      notificationBeforeShuruq = prefs.getInt('notificationBeforeShuruq') ?? 0;
+      notificationTime = prayer.time!.subtract(
+        Duration(minutes: notificationBeforeShuruq),
+      );
+    } else {
+      notificationTime = prayer.time!;
+      notificationBeforeShuruq = 0;
+    }
+
+    if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
+      newAlarmIds.add(prayer.alarmId.toString());
+
+      await AndroidAlarmManager.oneShotAt(
+        notificationTime,
+        prayer.alarmId,
+        ringAlarm,
+        alarmClock: true,
+        allowWhileIdle: true,
+        exact: true,
+        wakeup: true,
+        rescheduleOnReboot: true,
+        params: {
+          'index': index,
+          'sound': prayer.sound,
+          'mosque': prayer.mosqueName,
+          'prayer': prayer.prayerName,
+          'time': prayerTime,
+          'isPreNotification': false,
+          'minutesToAthan': '',
+          'notificationBeforeShuruq': notificationBeforeShuruq,
+          'sound_type': prayer.soundType,
+          'appLanguage': appLanguage,
+          'is24HourFormat': is24HourFormat,
+        },
+      );
+      print('Notification scheduled for ${prayer.prayerName} at: $notificationTime Id: ${prayer.alarmId}');
+    }
+  }
+
+  /// Schedule only if needed - prevents excessive rescheduling
+  /// Call this from ringAlarm instead of schedule() directly
+  Future<void> scheduleIfNeeded() async {
+    // Check if we scheduled recently
+    bool shouldSchedule = await ScheduleThrottleHelper.shouldSchedule();
+    if (!shouldSchedule) {
+      return;
+    }
+
+    // Check how many alarms are remaining
+    bool runningLow = await ScheduleThrottleHelper.isRunningLowOnAlarms(threshold: 3);
+    if (!runningLow) {
+      print('Skipping schedule - sufficient alarms remaining');
+      return;
+    }
+
+    print('Scheduling needed - running low on alarms');
+    await ScheduleThrottleHelper.recordScheduleTime();
+    await schedule();
+  }
+
+  /// Force a full reschedule (bypasses throttling)
+  Future<void> forceSchedule() async {
+    await ScheduleThrottleHelper.recordScheduleTime();
+    await schedule();
+  }
+
+  /// Check if migration is needed (for informational purposes)
+  /// Migration now happens automatically during first schedule
+  Future<bool> needsMigration() async {
+    if (!Platform.isAndroid) return false;
+    return !(await AlarmMigrationHelper.isMigrated());
   }
 }

@@ -53,12 +53,7 @@ class PrayerService {
           var notificationData = await _getPrayerDataByIndex(mosque, index);
           var prayerName = await _getPrayerName(index);
 
-          String indexStr = index.toString(),
-              dayStr = time!.day.toString(),
-              monthStr = time.month.toString();
-          String str = indexStr + dayStr + monthStr;
-          int alarmId = int.parse(str);
-          print('Alarm ID: $alarmId');
+          int alarmId = _generateAlarmId(index, time!);
 
           NotificationInfoModel prayer = NotificationInfoModel(
               mosqueName: mosque.name,
@@ -77,11 +72,8 @@ class PrayerService {
     prayersList.removeWhere((element) {
       return element.time!.isBefore(DateTime.now());
     });
-    prayersList.sort(
-      (a, b) => a.time!.millisecondsSinceEpoch
-          .toString()
-          .compareTo(b.time!.millisecondsSinceEpoch.toString()),
-    );
+    // Sort by time using numeric comparison (not string!)
+    prayersList.sort((a, b) => a.time!.compareTo(b.time!));
     prayersList = prayersList.sublist(0, Platform.isIOS ? 63 : 5);
     return prayersList;
   }
@@ -215,5 +207,31 @@ class PrayerService {
     } catch (e) {
       return false;
     }
+  }
+
+  /// Generates a unique, collision-free alarm ID
+  /// Format: YYYYMMDDP where P is prayer index (0-6)
+  /// Example: 202412150 = 2024-12-15, Fajr (index 0)
+  /// Range: 202401010 to 209912316 (fits in 32-bit int)
+  int _generateAlarmId(int prayerIndex, DateTime time) {
+    // Validate prayer index
+    if (prayerIndex < 0 || prayerIndex > 6) {
+      throw ArgumentError('Prayer index must be 0-6, got: $prayerIndex');
+    }
+
+    int year = time.year;
+    int month = time.month;
+    int day = time.day;
+
+    // Format: YYYYMMDDP
+    // Year (4 digits) * 100000 + Month (2 digits) * 1000 + Day (2 digits) * 10 + Prayer (1 digit)
+    return year * 100000 + month * 1000 + day * 10 + prayerIndex;
+  }
+
+  /// Generates pre-notification alarm ID
+  /// Adds 1,000,000,000 to base ID to create separate ID space
+  /// Example: Base 202412150 → Pre-notification 1202412150
+  int _generatePreNotificationAlarmId(int baseAlarmId) {
+    return 1000000000 + baseAlarmId;
   }
 }
