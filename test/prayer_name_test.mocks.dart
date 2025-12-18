@@ -46,20 +46,20 @@ class MockPrayersName extends _i1.Mock implements _i2.PrayersName {
         )),
       ) as _i3.Future<String>);
 
-  @override
-  _i3.Future<String> getStringText() => (super.noSuchMethod(
-        Invocation.method(
-          #getStringText,
-          [],
-        ),
-        returnValue: _i3.Future<String>.value(_i4.dummyValue<String>(
-          this,
-          Invocation.method(
-            #getStringText,
-            [],
-          ),
-        )),
-      ) as _i3.Future<String>);
+  // @override
+  // _i3.Future<String> getStringText() => (super.noSuchMethod(
+  //       Invocation.method(
+  //         #getStringText,
+  //         [],
+  //       ),
+  //       returnValue: _i3.Future<String>.value(_i4.dummyValue<String>(
+  //         this,
+  //         Invocation.method(
+  //           #getStringText,
+  //           [],
+  //         ),
+  //       )),
+  //     ) as _i3.Future<String>);
 
   @override
   _i3.Future<String> getLanguage() => (super.noSuchMethod(
