@@ -27,8 +27,11 @@ class PrayersName {
     }
   }
 
-  Future<String> getStringText() async {
+  Future<String> getStringText(int minuteToAthan) async {
     AppLocalizations localizations = await LocalizationHelper.getLocalization();
+    if (await getLanguage() == 'ar' && minuteToAthan > 10) {
+      return 'دقيقة حتى آذان';
+    }
     return localizations.minutes_to_athan;
   }
 
@@ -37,8 +40,11 @@ class PrayersName {
     return localizations.in_;
   }
 
-  Future<String> getMinutesText() async {
+  Future<String> getMinutesText(int minuteToAthan) async {
     AppLocalizations localizations = await LocalizationHelper.getLocalization();
+    if (await getLanguage() == 'ar' && minuteToAthan <= 10) {
+      return 'دقائق';
+    }
     return localizations.minutes;
   }
 
