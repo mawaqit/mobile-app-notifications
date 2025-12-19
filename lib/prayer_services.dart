@@ -82,7 +82,7 @@ class PrayerService {
           .toString()
           .compareTo(b.time!.millisecondsSinceEpoch.toString()),
     );
-    prayersList = prayersList.sublist(0, Platform.isIOS ? 63 : 5);
+    prayersList = prayersList.sublist(0, Platform.isIOS ? 63 : 6);
     return prayersList;
   }
 

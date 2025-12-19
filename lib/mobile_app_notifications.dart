@@ -202,6 +202,7 @@ class ScheduleAdhan {
       //for Pre notification
       var preNotificationTime = prayer.time!.subtract(Duration(minutes: prayer.notificationBeforeAthan));
 
+print(prayer.prayerName.toString() + ' before '+prayer.notificationBeforeAthan.toString());
       if (prayer.notificationBeforeAthan != 0 && preNotificationTime.isAfter(DateTime.now())) {
         var id = "1${prayer.alarmId}";
         newAlarmIds.add(id);
