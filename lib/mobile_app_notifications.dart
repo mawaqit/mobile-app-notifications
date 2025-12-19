@@ -204,7 +204,7 @@ class ScheduleAdhan {
 
 print(prayer.prayerName.toString() + ' before '+prayer.notificationBeforeAthan.toString());
       if (prayer.notificationBeforeAthan != 0 && preNotificationTime.isAfter(DateTime.now())) {
-        var id = "1${prayer.alarmId}";
+        var id = (prayer.alarmId + 100000).toString();
         newAlarmIds.add(id);
         try {
           AndroidAlarmManager.oneShotAt(preNotificationTime, int.parse(id), ringAlarm,
@@ -269,13 +269,13 @@ print(prayer.prayerName.toString() + ' before '+prayer.notificationBeforeAthan.t
                 'is24HourFormat': is24HourFormat
               });
           print('Sound ${prayer.sound} Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
-          await prefs.setStringList('alarmIds', newAlarmIds);
         } catch (e, t) {
           print(t);
           print(e);
         }
       }
     }
+    await prefs.setStringList('alarmIds', newAlarmIds);
     isScheduling = false;
 
     print(newAlarmIds.toList());
@@ -317,7 +317,7 @@ print(prayer.prayerName.toString() + ' before '+prayer.notificationBeforeAthan.t
             String title =
                 '${prayer.notificationBeforeAthan} $minutesToAthan $translatedPrayerName';
             await iosNotificationSchedular(
-              int.parse(("1${prayer.alarmId}")),
+              prayer.alarmId + 100000,
               preNotificationTime,
               title,
               prayer.mosqueName,
