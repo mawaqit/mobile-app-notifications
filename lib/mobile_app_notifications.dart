@@ -126,7 +126,6 @@ class ScheduleAdhan {
   // Private constructor
   ScheduleAdhan._privateConstructor() {
     newAlarmIds = [];
-    isScheduling = false;
   }
 
   // Singleton instance
@@ -137,7 +136,6 @@ class ScheduleAdhan {
 
   // The list that should be initialized only once
   late List<String> newAlarmIds;
-  late bool isScheduling;
 
   Future<bool> checkIOSNotificationPermissions() async {
     final iosPlugin =
@@ -171,11 +169,7 @@ class ScheduleAdhan {
 
   scheduleAndroid() async {
     print('from schedule');
-    if (isScheduling) {
-      print("Scheduling in progress, please wait until it's completed...");
-      return;
-    }
-    isScheduling = true;
+
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
     List<String> previousAlarms = prefs.getStringList('alarmIds') ?? [];
@@ -275,7 +269,6 @@ class ScheduleAdhan {
         }
       }
     }
-    isScheduling = false;
 
     print(newAlarmIds.toList());
   }
