@@ -169,6 +169,78 @@ class ScheduleAdhan {
 
   flushAlarmIdList() => newAlarmIds = [];
 
+  /// Migration: Clear all old alarms on first launch after update
+  /// This prevents orphan alarms from old ID format
+  Future<void> migrateOldAlarmIds() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    bool migrated = prefs.getBool('alarms_migrated_v2') ?? false;
+
+    if (!migrated && Platform.isAndroid) {
+      print('Migrating alarms from old version...');
+
+      // Cancel all tracked alarms
+      List<String> oldAlarms = prefs.getStringList('alarmIds') ?? [];
+      for (String id in oldAlarms) {
+        await AndroidAlarmManager.cancel(int.parse(id));
+      }
+
+      // Brute force cancel all possible old-format IDs
+      for (int index = 0; index < 7; index++) {
+        for (int day = 1; day <= 31; day++) {
+          for (int month = 1; month <= 12; month++) {
+            // Old main ID format: index + day + month as string
+            int oldMainId = int.parse('$index$day$month');
+            // Old pre-notification ID format: "1" + mainId
+            int oldPreId = int.parse('1$oldMainId');
+            await AndroidAlarmManager.cancel(oldMainId);
+            await AndroidAlarmManager.cancel(oldPreId);
+          }
+        }
+      }
+
+      // Clear the list
+      await prefs.remove('alarmIds');
+
+      // Mark as migrated
+      await prefs.setBool('alarms_migrated_v2', true);
+
+      print('Migration complete. Rescheduling with new IDs...');
+
+      // Reschedule with new IDs
+      await scheduleAndroid();
+    }
+  }
+
+  /// Clear all alarms and reschedule - used for 500 error recovery
+  Future<void> _clearAllAndReschedule() async {
+    print('500 alarm limit hit - clearing all and rescheduling...');
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    // Cancel all tracked alarms
+    List<String> alarms = prefs.getStringList('alarmIds') ?? [];
+    for (String id in alarms) {
+      try {
+        await AndroidAlarmManager.cancel(int.parse(id));
+      } catch (e) {
+        // Ignore cancel errors
+      }
+    }
+
+    // Brute force cancel possible IDs
+    for (int i = 0; i < 1000000; i += 10000) {
+      for (int j = 0; j < 100; j++) {
+        await AndroidAlarmManager.cancel(i + j);
+      }
+    }
+
+    // Clear tracked list
+    await prefs.remove('alarmIds');
+    flushAlarmIdList();
+
+    print('Cleanup complete.');
+  }
+
   scheduleAndroid() async {
     print('from schedule');
     if (isScheduling) {
@@ -202,12 +274,11 @@ class ScheduleAdhan {
       //for Pre notification
       var preNotificationTime = prayer.time!.subtract(Duration(minutes: prayer.notificationBeforeAthan));
 
-print(prayer.prayerName.toString() + ' before '+prayer.notificationBeforeAthan.toString());
       if (prayer.notificationBeforeAthan != 0 && preNotificationTime.isAfter(DateTime.now())) {
         var id = (prayer.alarmId + 100000).toString();
         newAlarmIds.add(id);
         try {
-          AndroidAlarmManager.oneShotAt(preNotificationTime, int.parse(id), ringAlarm,
+          await AndroidAlarmManager.oneShotAt(preNotificationTime, int.parse(id), ringAlarm,
               alarmClock: true,
               allowWhileIdle: true,
               exact: true,
@@ -229,6 +300,13 @@ print(prayer.prayerName.toString() + ' before '+prayer.notificationBeforeAthan.t
         } catch (e, t) {
           print(t);
           print(e);
+          // Auto-recover from 500 alarm limit
+          if (e.toString().contains('500')) {
+            await _clearAllAndReschedule();
+            isScheduling = false;
+            await scheduleAndroid();
+            return;
+          }
         }
       }
       //for Adhan notification
@@ -249,7 +327,7 @@ print(prayer.prayerName.toString() + ' before '+prayer.notificationBeforeAthan.t
       if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
         newAlarmIds.add(prayer.alarmId.toString());
         try {
-          AndroidAlarmManager.oneShotAt(notificationTime, prayer.alarmId, ringAlarm,
+          await AndroidAlarmManager.oneShotAt(notificationTime, prayer.alarmId, ringAlarm,
               alarmClock: true,
               allowWhileIdle: true,
               exact: true,
@@ -272,6 +350,13 @@ print(prayer.prayerName.toString() + ' before '+prayer.notificationBeforeAthan.t
         } catch (e, t) {
           print(t);
           print(e);
+          // Auto-recover from 500 alarm limit
+          if (e.toString().contains('500')) {
+            await _clearAllAndReschedule();
+            isScheduling = false;
+            await scheduleAndroid();
+            return;
+          }
         }
       }
     }
@@ -324,7 +409,7 @@ print(prayer.prayerName.toString() + ' before '+prayer.notificationBeforeAthan.t
               null,
             );
             print(
-                'Pre Notification scheduled for ${prayer.prayerName} at: $preNotificationTime Id: ${1 + prayer.alarmId}');
+                'Pre Notification scheduled for ${prayer.prayerName} at: $preNotificationTime Id: ${prayer.alarmId + 100000}');
             j++;
           }
 
