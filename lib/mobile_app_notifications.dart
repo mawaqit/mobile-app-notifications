@@ -275,6 +275,8 @@ class ScheduleAdhan {
       var preNotificationTime = prayer.time!.subtract(Duration(minutes: prayer.notificationBeforeAthan));
 
       if (prayer.notificationBeforeAthan != 0 && preNotificationTime.isAfter(DateTime.now())) {
+        int index = await PrayersName().getPrayerIndex(prayer.prayerName ?? '');
+        if (index == 1) continue;
         var id = (prayer.alarmId + 100000).toString();
         newAlarmIds.add(id);
         try {
