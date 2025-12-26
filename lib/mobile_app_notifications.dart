@@ -363,10 +363,25 @@ class ScheduleAdhan {
       int notificationBeforeShuruq;
 
       int index = await PrayersName().getPrayerIndex(prayer.prayerName ?? '');
-      if (index == 1) {
-        notificationBeforeShuruq = prefs.getInt('notificationBeforeShuruq') ?? 0;
+      // Only Fajr (index 0) gets the "ends in X minutes" (before Shuruq) notification
+      if (index == 0) {
+        int? notificationBeforeShuruq = prefs.getInt('notificationBeforeShuruq');
+        if (notificationBeforeShuruq != null && notificationBeforeShuruq > 0) {
+          // But wait! You need SUNRISE time, not Fajr time!
+          // Fajr ends at Sunrise, so the alert should be before SUNRISE, not before Fajr.
+          
+          // So you actually need to fetch the SUNRISE prayer time
+          var prayersList = await PrayerService().getPrayers();
+          var sunrisePrayer = prayersList.firstWhere(
+            (p) => PrayersName().getPrayerIndex(p.prayerName ?? '') == 1,
+            orElse: () => throw Exception('Sunrise prayer not found'),
+          );
 
-        notificationTime = prayer.time!.subtract(Duration(minutes: notificationBeforeShuruq));
+          notificationTime = sunrisePrayer.time!.subtract(Duration(minutes: notificationBeforeShuruq));
+          String inText = await PrayersName().getInText();
+          String minutes = await PrayersName().getMinutesText(notificationBeforeShuruq);
+          notificationTitle = '${prayer.prayerName} $inText $notificationBeforeShuruq $minutes';
+        }
       } else {
         notificationTime = prayer.time!;
         notificationBeforeShuruq = 0;
