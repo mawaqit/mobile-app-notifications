@@ -409,18 +409,20 @@ class ScheduleAdhan {
               wakeup: true,
               rescheduleOnReboot: true,
               params: {
-                'index': index,
-                'sound': prayer.sound,
-                'mosque': prayer.mosqueName,
-                'prayer': prayer.prayerName,
-                'time': prayerTime,
-                'isPreNotification': false,
-                'minutesToAthan': '',
-                'notificationBeforeShuruq': notificationBeforeShuruq,
-                'sound_type': prayer.soundType,
-                'appLanguage': appLanguage,
-                'is24HourFormat': is24HourFormat
-              });
+              'index': index,
+              'sound': prayer.sound,
+              'mosque': prayer.mosqueName,
+              'prayer': prayer.prayerName,
+              'time': prayerTime,
+              'isPreNotification': false,
+              'minutesToAthan': '',
+              'notificationBeforeShuruq': notificationBeforeShuruq,
+              'notificationTitle': notificationTitle,
+              'sound_type': prayer.soundType,
+              'appLanguage': appLanguage,
+              'is24HourFormat': is24HourFormat
+            }
+            );
           print('      ✅ Adhan Notification scheduled successfully');
         } catch (e, t) {
           print(t);
