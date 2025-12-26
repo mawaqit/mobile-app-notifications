@@ -53,7 +53,11 @@ class PrayerService {
           var notificationData = await _getPrayerDataByIndex(mosque, index);
           var prayerName = await _getPrayerName(index);
 
-          int alarmId = (index * 1000000) + ((time!.year % 100) * 10000) + (time!.day * 100) + time!.month;
+          if (time == null) {
+            continue;
+          }
+
+          int alarmId = (index * 1000000) + ((time.year % 100) * 10000) + (time.day * 100) + time.month;
           print('Alarm ID: $alarmId');
 
           NotificationInfoModel prayer = NotificationInfoModel(
@@ -61,8 +65,7 @@ class PrayerService {
               sound: obj.notificationSound,
               prayerName: prayerName,
               time: time,
-              notificationBeforeAthan:
-                  notificationData?.notificationBeforeAthan ?? 0,
+              notificationBeforeAthan: notificationData?.notificationBeforeAthan ?? 0,
               alarmId: alarmId,
               soundType: obj.soundType.name);
 
