@@ -21,7 +21,16 @@ var flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
 @pragma('vm:entry-point')
 void ringAlarm(int id, Map<String, dynamic> data) async {
-  print('from ringAlarm');
+  final currentTime = DateTime.now();
+  final formattedTime = DateFormat('HH:mm:ss').format(currentTime);
+  
+  print('═══════════════════════════════════════════════════════');
+  print('🔔 STATIC NOTIFICATION TRIGGERED (mobile_app_notifications)');
+  print('   ⚠️  THIS IS FOR STATIC NOTIFICATIONS LIKE "Sunrise in 5 min"');
+  print('   Alarm ID: $id');
+  print('   Triggered at: $formattedTime');
+  print('═══════════════════════════════════════════════════════');
+  
   String sound = data['sound'];
   String mosque = data['mosque'];
   String prayer = data['prayer'];
@@ -34,11 +43,22 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
   String appLanguage = data['appLanguage'] ?? 'en';
   bool is24HourFormat = data['is24HourFormat'] ?? true;
 
+  print('📋 Notification Data:');
+  print('   Prayer: $prayer');
+  print('   Mosque: $mosque');
+  print('   Time: $time');
+  print('   Sound: $sound');
+  print('   Sound Type: $soundType');
+  print('   Is Pre-Notification: $isPreNotification');
+  print('   Minutes To Athan: $minutesToAthan');
+  print('   Notification Before Shuruq: $notificationBeforeShuruq');
+
   String? adhanSound;
   String notificationTitle;
   try {
     if (isPreNotification) {
       notificationTitle = '$time $minutesToAthan $prayer';
+      print('   📅 Pre-Notification Title: "$notificationTitle"');
     } else {
       if (notificationBeforeShuruq != 0) {
         String inText = await PrayersName().getInText();
@@ -106,19 +126,31 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
     final NotificationDetails platformChannelSpecifics =
         NotificationDetails(android: androidPlatformChannelSpecifics);
 
+    print('📱 Displaying notification:');
+    print('   Title: "$notificationTitle"');
+    print('   Body: "$mosque"');
+    print('   Channel ID: $channelId');
+    print('   Channel Name: $channelName');
+    
     await flutterLocalNotificationsPlugin.show(
       id,
       notificationTitle,
       mosque,
       platformChannelSpecifics,
     );
+    
+    print('✅ STATIC NOTIFICATION DISPLAYED TO USER');
+    print('   User should now see: "$notificationTitle"');
+    print('═══════════════════════════════════════════════════════');
 
     ScheduleAdhan scheduleAdhan = ScheduleAdhan.instance;
     scheduleAdhan.schedule();
   } catch (e, t) {
-    print('an error occurs');
-    print(t);
-    print(e);
+    print('═══════════════════════════════════════════════════════');
+    print('❌ ERROR in ringAlarm:');
+    print('   Error: $e');
+    print('   Stack: $t');
+    print('═══════════════════════════════════════════════════════');
   }
 }
 
@@ -242,9 +274,17 @@ class ScheduleAdhan {
   }
 
   scheduleAndroid() async {
-    print('from schedule');
+    final currentTime = DateTime.now();
+    final formattedTime = DateFormat('HH:mm:ss').format(currentTime);
+    
+    print('═══════════════════════════════════════════════════════');
+    print('📅 SCHEDULING STATIC NOTIFICATIONS (ScheduleAdhan.scheduleAndroid)');
+    print('   ⚠️  THIS SCHEDULES STATIC NOTIFICATIONS LIKE "Sunrise in 5 min"');
+    print('   Started at: $formattedTime');
+    print('═══════════════════════════════════════════════════════');
+    
     if (isScheduling) {
-      print("Scheduling in progress, please wait until it's completed...");
+      print("⚠️  Scheduling in progress, please wait until it's completed...");
       return;
     }
     isScheduling = true;
@@ -278,6 +318,14 @@ class ScheduleAdhan {
         var id = (prayer.alarmId + 100000).toString();
         newAlarmIds.add(id);
         try {
+          final preNotificationTimeFormatted = DateFormat('yyyy-MM-dd HH:mm:ss').format(preNotificationTime);
+          print('   📌 Scheduling PRE-NOTIFICATION:');
+          print('      Prayer: ${prayer.prayerName}');
+          print('      Scheduled Time: $preNotificationTimeFormatted');
+          print('      Minutes Before: ${prayer.notificationBeforeAthan}');
+          print('      Alarm ID: $id');
+          print('      Title will be: "${prayer.notificationBeforeAthan} $minutesToAthan ${prayer.prayerName}"');
+          
           await AndroidAlarmManager.oneShotAt(preNotificationTime, int.parse(id), ringAlarm,
               alarmClock: true,
               allowWhileIdle: true,
@@ -296,7 +344,7 @@ class ScheduleAdhan {
                 'appLanguage': appLanguage,
                 'is24HourFormat': is24HourFormat
               });
-          print('Pre Notification scheduled for ${prayer.prayerName} at : $preNotificationTime Id: $id');
+          print('      ✅ Pre Notification scheduled successfully');
         } catch (e, t) {
           print(t);
           print(e);
@@ -311,15 +359,32 @@ class ScheduleAdhan {
       }
       //for Adhan notification
       String prayerTime = DateFormat('HH:mm').format(prayer.time!);
-      DateTime notificationTime;
-      int notificationBeforeShuruq;
+      DateTime notificationTime = prayer.time!;
+      int notificationBeforeShuruq = 0;
+
 
       int index = await PrayersName().getPrayerIndex(prayer.prayerName ?? '');
-      if (index == 1) {
-        notificationBeforeShuruq = prefs.getInt('notificationBeforeShuruq') ?? 0;
+      // Only Fajr (index 0) gets the "ends in X minutes" (before Shuruq) notification
+      if (index == 0) {
+        int? beforeShuruq = prefs.getInt('notificationBeforeShuruq');
+        if (beforeShuruq != null && beforeShuruq > 0) {
+          var prayersList = await PrayerService().getPrayers();
+          var sunrisePrayer = prayersList.firstWhere(
+            (p) => PrayersName().getPrayerIndex(p.prayerName ?? '') == 1,
+          );
 
-        notificationTime = prayer.time!.subtract(Duration(minutes: notificationBeforeShuruq));
-      } else {
+          notificationBeforeShuruq = beforeShuruq;
+          notificationTime =
+              sunrisePrayer.time!.subtract(Duration(minutes: beforeShuruq));
+
+          String inText = await PrayersName().getInText();
+          String minutes = await PrayersName().getMinutesText(beforeShuruq);
+          String notificationTitle =
+          '${prayer.prayerName} $inText $beforeShuruq $minutes';
+
+        }
+      }
+      else {
         notificationTime = prayer.time!;
         notificationBeforeShuruq = 0;
       }
@@ -327,6 +392,16 @@ class ScheduleAdhan {
       if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
         newAlarmIds.add(prayer.alarmId.toString());
         try {
+          final notificationTimeFormatted = DateFormat('yyyy-MM-dd HH:mm:ss').format(notificationTime);
+          print('   📌 Scheduling ADHAN NOTIFICATION:');
+          print('      Prayer: ${prayer.prayerName}');
+          print('      Scheduled Time: $notificationTimeFormatted');
+          print('      Sound: ${prayer.sound}');
+          print('      Alarm ID: ${prayer.alarmId}');
+          if (notificationBeforeShuruq != 0) {
+            print('      Shuruq notification: $notificationBeforeShuruq minutes before');
+          }
+          
           await AndroidAlarmManager.oneShotAt(notificationTime, prayer.alarmId, ringAlarm,
               alarmClock: true,
               allowWhileIdle: true,
@@ -346,7 +421,7 @@ class ScheduleAdhan {
                 'appLanguage': appLanguage,
                 'is24HourFormat': is24HourFormat
               });
-          print('Sound ${prayer.sound} Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
+          print('      ✅ Adhan Notification scheduled successfully');
         } catch (e, t) {
           print(t);
           print(e);
@@ -363,7 +438,11 @@ class ScheduleAdhan {
     await prefs.setStringList('alarmIds', newAlarmIds);
     isScheduling = false;
 
-    print(newAlarmIds.toList());
+    print('═══════════════════════════════════════════════════════');
+    print('✅ STATIC NOTIFICATIONS SCHEDULING COMPLETE');
+    print('   Total alarms scheduled: ${newAlarmIds.length}');
+    print('   Alarm IDs: ${newAlarmIds.toList()}');
+    print('═══════════════════════════════════════════════════════');
   }
 
   scheduleIOS() async {
