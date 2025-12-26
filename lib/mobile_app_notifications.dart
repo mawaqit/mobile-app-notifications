@@ -359,30 +359,32 @@ class ScheduleAdhan {
       }
       //for Adhan notification
       String prayerTime = DateFormat('HH:mm').format(prayer.time!);
-      DateTime notificationTime;
-      int notificationBeforeShuruq;
+      DateTime notificationTime = prayer.time!;
+      int notificationBeforeShuruq = 0;
+
 
       int index = await PrayersName().getPrayerIndex(prayer.prayerName ?? '');
       // Only Fajr (index 0) gets the "ends in X minutes" (before Shuruq) notification
       if (index == 0) {
-        int? notificationBeforeShuruq = prefs.getInt('notificationBeforeShuruq');
-        if (notificationBeforeShuruq != null && notificationBeforeShuruq > 0) {
-          // But wait! You need SUNRISE time, not Fajr time!
-          // Fajr ends at Sunrise, so the alert should be before SUNRISE, not before Fajr.
-          
-          // So you actually need to fetch the SUNRISE prayer time
+        int? beforeShuruq = prefs.getInt('notificationBeforeShuruq');
+        if (beforeShuruq != null && beforeShuruq > 0) {
           var prayersList = await PrayerService().getPrayers();
           var sunrisePrayer = prayersList.firstWhere(
             (p) => PrayersName().getPrayerIndex(p.prayerName ?? '') == 1,
-            orElse: () => throw Exception('Sunrise prayer not found'),
           );
 
-          notificationTime = sunrisePrayer.time!.subtract(Duration(minutes: notificationBeforeShuruq));
+          notificationBeforeShuruq = beforeShuruq;
+          notificationTime =
+              sunrisePrayer.time!.subtract(Duration(minutes: beforeShuruq));
+
           String inText = await PrayersName().getInText();
-          String minutes = await PrayersName().getMinutesText(notificationBeforeShuruq);
-          notificationTitle = '${prayer.prayerName} $inText $notificationBeforeShuruq $minutes';
+          String minutes = await PrayersName().getMinutesText(beforeShuruq);
+          String notificationTitle =
+          '${prayer.prayerName} $inText $beforeShuruq $minutes';
+
         }
-      } else {
+      }
+      else {
         notificationTime = prayer.time!;
         notificationBeforeShuruq = 0;
       }
