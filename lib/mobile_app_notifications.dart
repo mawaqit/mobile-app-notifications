@@ -266,19 +266,27 @@ class ScheduleAdhan {
     for (var i = 0; i < prayersList.length; i++) {
       var prayer = prayersList[i];
 
-      String minutesToAthan = await PrayersName().getStringText(prayer.notificationBeforeAthan);
+      String minutesToAthan =
+          await PrayersName().getStringText(prayer.notificationBeforeAthan);
       //Fetch App Language
       String appLanguage = await PrayersName().getLanguage();
       //Fetch App time format
       bool is24HourFormat = await PrayerTimeFormat().get24HoursFormatSetting();
       //for Pre notification
-      var preNotificationTime = prayer.time!.subtract(Duration(minutes: prayer.notificationBeforeAthan));
+      var preNotificationTime = prayer.time!
+          .subtract(Duration(minutes: prayer.notificationBeforeAthan));
+      int prayerIndex =
+          await PrayersName().getPrayerIndex(prayer.prayerName ?? '');
 
-      if (prayer.notificationBeforeAthan != 0 && preNotificationTime.isAfter(DateTime.now())) {
+      /// to skip shuruq notification && prayerIndex != 1
+      if (prayer.notificationBeforeAthan != 0 &&
+          preNotificationTime.isAfter(DateTime.now()) &&
+          prayerIndex != 1) {
         var id = (prayer.alarmId + 100000).toString();
         newAlarmIds.add(id);
         try {
-          await AndroidAlarmManager.oneShotAt(preNotificationTime, int.parse(id), ringAlarm,
+          await AndroidAlarmManager.oneShotAt(
+              preNotificationTime, int.parse(id), ringAlarm,
               alarmClock: true,
               allowWhileIdle: true,
               exact: true,
@@ -296,7 +304,8 @@ class ScheduleAdhan {
                 'appLanguage': appLanguage,
                 'is24HourFormat': is24HourFormat
               });
-          print('Pre Notification scheduled for ${prayer.prayerName} at : $preNotificationTime Id: $id');
+          print(
+              'Pre Notification scheduled for ${prayer.prayerName} at : $preNotificationTime Id: $id');
         } catch (e, t) {
           print(t);
           print(e);
@@ -314,27 +323,30 @@ class ScheduleAdhan {
       DateTime notificationTime;
       int notificationBeforeShuruq;
 
-      int index = await PrayersName().getPrayerIndex(prayer.prayerName ?? '');
-      if (index == 1) {
-        notificationBeforeShuruq = prefs.getInt('notificationBeforeShuruq') ?? 0;
+      if (prayerIndex == 1) {
+        notificationBeforeShuruq =
+            prefs.getInt('notificationBeforeShuruq') ?? 0;
 
-        notificationTime = prayer.time!.subtract(Duration(minutes: notificationBeforeShuruq));
+        notificationTime =
+            prayer.time!.subtract(Duration(minutes: notificationBeforeShuruq));
       } else {
         notificationTime = prayer.time!;
         notificationBeforeShuruq = 0;
       }
 
-      if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
+      if (prayer.sound != 'SILENT' &&
+          notificationTime.isAfter(DateTime.now())) {
         newAlarmIds.add(prayer.alarmId.toString());
         try {
-          await AndroidAlarmManager.oneShotAt(notificationTime, prayer.alarmId, ringAlarm,
+          await AndroidAlarmManager.oneShotAt(
+              notificationTime, prayer.alarmId, ringAlarm,
               alarmClock: true,
               allowWhileIdle: true,
               exact: true,
               wakeup: true,
               rescheduleOnReboot: true,
               params: {
-                'index': index,
+                'index': prayerIndex,
                 'sound': prayer.sound,
                 'mosque': prayer.mosqueName,
                 'prayer': prayer.prayerName,
@@ -346,7 +358,8 @@ class ScheduleAdhan {
                 'appLanguage': appLanguage,
                 'is24HourFormat': is24HourFormat
               });
-          print('Sound ${prayer.sound} Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
+          print(
+              'Sound ${prayer.sound} Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
         } catch (e, t) {
           print(t);
           print(e);
@@ -379,104 +392,102 @@ class ScheduleAdhan {
 
       if (prayersList.isEmpty) {
         return; // Exit early if there are no prayers
-      } else {
-        // Loop to schedule up to 63 notifications
-        while (i < prayersList.length && j < 63) {
-          var prayer = prayersList[i];
-          int index =
-              await PrayersName().getPrayerIndex(prayer.prayerName ?? '');
+      }
 
-          // Fetch prayer translations and preset strings
-          String translatedPrayerName = prayer.prayerName ?? 'Unknown';
-          String minutesToAthan =
-              await PrayersName().getStringText(prayer.notificationBeforeAthan);
-          String inText = await PrayersName().getInText();
+      // Loop to schedule up to 63 notifications
+      while (i < prayersList.length && j < 63) {
+        var prayer = prayersList[i];
+        int prayerIndex = await PrayersName().getPrayerIndex(prayer.prayerName ?? '');
 
-          // Pre-notification logic
-          var preNotificationTime = prayer.time!
-              .subtract(Duration(minutes: prayer.notificationBeforeAthan));
+        // Fetch prayer translations and preset strings
+        String translatedPrayerName = prayer.prayerName ?? 'Unknown';
+        String minutesToAthan =
+            await PrayersName().getStringText(prayer.notificationBeforeAthan);
+        String inText = await PrayersName().getInText();
 
-          /// PRE NOTIFICATION
-          if (prayer.notificationBeforeAthan != 0 &&
-              preNotificationTime.isAfter(DateTime.now())) {
-            String title =
-                '${prayer.notificationBeforeAthan} $minutesToAthan $translatedPrayerName';
-            await iosNotificationSchedular(
-              prayer.alarmId + 100000,
-              preNotificationTime,
-              title,
-              prayer.mosqueName,
-              null,
-            );
-            print(
-                'Pre Notification scheduled for ${prayer.prayerName} at: $preNotificationTime Id: ${prayer.alarmId + 100000}');
-            j++;
-          }
+        // Pre-notification logic
+        var preNotificationTime = prayer.time!
+            .subtract(Duration(minutes: prayer.notificationBeforeAthan));
 
-          // Main Athan notification logic
-          String prayerTime = DateFormat('HH:mm').format(prayer.time!);
-          DateTime notificationTime = prayer.time!;
-          //Fetch App Language
-          String languageCode = await PrayersName().getLanguage();
-          //Fetch App time format
-          bool is24HourFormat =
-              await PrayerTimeFormat().get24HoursFormatSetting();
-          // Make notification time on the base of TIME FORMAT and SELECTED LANGUAGE from APP
-          String formatedPrayerTime = PrayerTimeFormat().getFormattedPrayerTime(
-              prayerTime: prayerTime,
-              timeFormat: is24HourFormat,
-              selectedLanguage: languageCode);
-          String notificationTitle =
-              '$translatedPrayerName $formatedPrayerTime';
-          int notificationBeforeShuruq;
-
-          // Handle Shuruq timing if the prayer is Fajr (index == 1)
-          if (index == 1) {
-            notificationBeforeShuruq =
-                prefs.getInt('notificationBeforeShuruq') ?? 0;
-            notificationTime = prayer.time!
-                .subtract(Duration(minutes: notificationBeforeShuruq));
-            String minutes =
-                await PrayersName().getMinutesText(notificationBeforeShuruq);
-            notificationTitle =
-                '$translatedPrayerName $inText $notificationBeforeShuruq $minutes';
-          }
-
-          if (prayer.sound != 'SILENT' &&
-              notificationTime.isAfter(DateTime.now())) {
-            if (prayer.soundType == SoundType.systemSound.name) {
-              String? soundFile;
-
-              if (prayer.sound?.isNotEmpty == true) {
-                soundFile =
-                    await PrayerService().getDeviceSound(prayer.sound ?? "");
-              }
-
-              await iosNotificationSchedular(
-                prayer.alarmId,
-                notificationTime,
-                notificationTitle,
-                prayer.mosqueName,
-                soundFile ?? prayer.sound,
-              );
-            } else {
-              await iosNotificationSchedular(
-                prayer.alarmId,
-                notificationTime,
-                notificationTitle,
-                prayer.mosqueName,
-                prayer.sound,
-              );
-            }
-            print(
-                'Notification scheduled for ${prayer.prayerName} at: $notificationTime with Id: ${prayer.alarmId}');
-            j++;
-            // }
-          }
-
-          // Move to the next prayer
-          i++;
+        /// PRE NOTIFICATION. && prayerIndex != 1 to skip shuruq notification
+        if (prayer.notificationBeforeAthan != 0 &&
+            preNotificationTime.isAfter(DateTime.now()) && prayerIndex != 1) {
+          String title =
+              '${prayer.notificationBeforeAthan} $minutesToAthan $translatedPrayerName';
+          await iosNotificationSchedular(
+            prayer.alarmId + 100000,
+            preNotificationTime,
+            title,
+            prayer.mosqueName,
+            null,
+          );
+          print(
+              'Pre Notification scheduled for ${prayer.prayerName} at: $preNotificationTime Id: ${prayer.alarmId + 100000}');
+          j++;
         }
+
+        // Main Athan notification logic
+        String prayerTime = DateFormat('HH:mm').format(prayer.time!);
+        DateTime notificationTime = prayer.time!;
+        //Fetch App Language
+        String languageCode = await PrayersName().getLanguage();
+        //Fetch App time format
+        bool is24HourFormat =
+            await PrayerTimeFormat().get24HoursFormatSetting();
+        // Make notification time on the base of TIME FORMAT and SELECTED LANGUAGE from APP
+        String formatedPrayerTime = PrayerTimeFormat().getFormattedPrayerTime(
+            prayerTime: prayerTime,
+            timeFormat: is24HourFormat,
+            selectedLanguage: languageCode);
+        String notificationTitle = '$translatedPrayerName $formatedPrayerTime';
+        int notificationBeforeShuruq;
+
+        // Handle Shuruq timing if the prayer is Fajr (index == 1)
+        if (prayerIndex == 1) {
+          notificationBeforeShuruq =
+              prefs.getInt('notificationBeforeShuruq') ?? 0;
+          notificationTime = prayer.time!
+              .subtract(Duration(minutes: notificationBeforeShuruq));
+          String minutes =
+              await PrayersName().getMinutesText(notificationBeforeShuruq);
+          notificationTitle =
+              '$translatedPrayerName $inText $notificationBeforeShuruq $minutes';
+        }
+
+        if (prayer.sound != 'SILENT' &&
+            notificationTime.isAfter(DateTime.now())) {
+          if (prayer.soundType == SoundType.systemSound.name) {
+            String? soundFile;
+
+            if (prayer.sound?.isNotEmpty == true) {
+              soundFile =
+                  await PrayerService().getDeviceSound(prayer.sound ?? "");
+            }
+
+            await iosNotificationSchedular(
+              prayer.alarmId,
+              notificationTime,
+              notificationTitle,
+              prayer.mosqueName,
+              soundFile ?? prayer.sound,
+            );
+          } else {
+            await iosNotificationSchedular(
+              prayer.alarmId,
+              notificationTime,
+              notificationTitle,
+              prayer.mosqueName,
+              prayer.sound,
+            );
+          }
+          print(
+              'Notification scheduled for ${prayer.prayerName} at: $notificationTime with Id: ${prayer.alarmId}');
+          j++;
+          // }
+        }
+
+        // Move to the next prayer
+        i++;
       }
     } catch (e, s) {
       // Enhanced error logging
