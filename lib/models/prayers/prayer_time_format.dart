@@ -1,3 +1,4 @@
+import 'package:mawaqit_core_logger/mawaqit_core_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PrayerTimeFormat {
@@ -38,8 +39,8 @@ class PrayerTimeFormat {
           return "$timeIn12HourFormat $amOrPm";
         }
       }
-    } catch (e) {
-      print("Exception in getFormattedPrayerTime: $e");
+    } catch (e, stackTrace) {
+      Log.e("Exception in getFormattedPrayerTime: $e", error: e, stackTrace: stackTrace);
     }
     return prayerTime;
   }
