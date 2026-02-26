@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mawaqit_core_logger/mawaqit_core_logger.dart';
 import 'package:mobile_app_notifications/models/prayers/prayer_name.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
@@ -72,7 +71,7 @@ void main() {
           default:
             expect(result, 'غير معروف');
         }
-        Log.i('Arabic prayer name for index $i: $result');
+        print('Arabic prayer name for index $i: $result');
       }
     });
 
@@ -128,7 +127,7 @@ void main() {
           default:
             expect(result, 'অজানা');
         }
-        Log.i('Bengali prayer name for index $i: $result');
+        print('Bengali prayer name for index $i: $result');
       }
     });
 
@@ -184,7 +183,7 @@ void main() {
           default:
             expect(result, 'Unknown');
         }
-        Log.i('English prayer name for index $i: $result');
+        print('English prayer name for index $i: $result');
       }
     });
 
@@ -196,7 +195,7 @@ void main() {
 
       var result = await mockPrayersName.getPrayerName(0);
       expect(result, 'Unknown');
-      Log.w('Unsupported language prayer name for index 0: $result');
+      print('Unsupported language prayer name for index 0: $result');
     });
   });
 }
