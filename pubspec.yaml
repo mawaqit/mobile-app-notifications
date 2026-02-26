@@ -27,11 +27,6 @@ dependencies:
       url: https://github.com/mawaqit/mawaqit-mobile-i18n.git
       ref: main
 
-  mawaqit_core_logger:
-    git:
-      url: https://github.com/mawaqit/mawaqit_core_logger.git
-      ref: v1.1.2
-
 dev_dependencies:
   flutter_test:
     sdk: flutter

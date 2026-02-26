@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print, unused_local_variable
+
 library mobile_app_notifications;
 
 import 'dart:io';
@@ -6,7 +8,6 @@ import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:intl/intl.dart';
-import 'package:mawaqit_core_logger/mawaqit_core_logger.dart';
 import 'package:mobile_app_notifications/helpers/device_ringtone_mode.dart';
 import 'package:mobile_app_notifications/models/prayers/prayer_name.dart';
 import 'package:mobile_app_notifications/models/prayers/prayer_notification.dart';
@@ -20,7 +21,7 @@ var flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
 @pragma('vm:entry-point')
 void ringAlarm(int id, Map<String, dynamic> data) async {
-  Log.i('from ringAlarm');
+  print('from ringAlarm');
   String sound = data['sound'];
   String mosque = data['mosque'];
   String prayer = data['prayer'];
@@ -64,7 +65,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
 
     bool mute = await DeviceRingtoneMode.isMuted();
 
-    Log.i('is mute: $mute');
+    print('is mute: $mute');
 
     // Assign per-prayer channel ID
     String baseChannelId = prayer.toLowerCase(); // e.g., 'fajr', 'dhuhr'
@@ -74,7 +75,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
         ? 'Pre $baseChannelId '
         : '$baseChannelId Adhan $sound';
 
-    Log.t(" ----- ------- -- - - - --- -channelId: $channelId");
+    print(" ----- ------- -- - - - --- -channelId: $channelId");
     final AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
       mute ? 'Silent $channelId' : channelId,
@@ -115,7 +116,9 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
     ScheduleAdhan scheduleAdhan = ScheduleAdhan.instance;
     scheduleAdhan.schedule();
   } catch (e, t) {
-    Log.e("Exception ringAlarm", error: e, stackTrace: t);
+    print('an error occurs');
+    print(t);
+    print(e);
   }
 }
 
@@ -142,13 +145,13 @@ class ScheduleAdhan {
             IOSFlutterLocalNotificationsPlugin>();
     final permissionStatus = await iosPlugin?.checkPermissions();
     if (permissionStatus == null) {
-      Log.i('Could not get permission status');
+      print('Could not get permission status');
       return false;
     } else {
-      Log.i('OverAll: ${permissionStatus.isEnabled}');
-      Log.i('Alert: ${permissionStatus.isAlertEnabled}');
-      Log.i('Badge: ${permissionStatus.isBadgeEnabled}');
-      Log.i('Sound: ${permissionStatus.isSoundEnabled}');
+      print('OverAll: ${permissionStatus.isEnabled}');
+      print('Alert: ${permissionStatus.isAlertEnabled}');
+      print('Badge: ${permissionStatus.isBadgeEnabled}');
+      print('Sound: ${permissionStatus.isSoundEnabled}');
       return permissionStatus.isEnabled &&
           permissionStatus.isAlertEnabled &&
           permissionStatus.isBadgeEnabled &&
@@ -173,7 +176,7 @@ class ScheduleAdhan {
     bool migrated = prefs.getBool('alarms_migrated_v2') ?? false;
 
     if (!migrated && Platform.isAndroid) {
-      Log.i('Migrating alarms from old version...');
+      print('Migrating alarms from old version...');
 
       // Cancel all tracked alarms
       List<String> oldAlarms = prefs.getStringList('alarmIds') ?? [];
@@ -201,7 +204,7 @@ class ScheduleAdhan {
       // Mark as migrated
       await prefs.setBool('alarms_migrated_v2', true);
 
-      Log.t('Migration complete. Rescheduling with new IDs...');
+      print('Migration complete. Rescheduling with new IDs...');
 
       // Reschedule with new IDs
       await scheduleAndroid();
@@ -210,7 +213,7 @@ class ScheduleAdhan {
 
   /// Clear all alarms and reschedule - used for 500 error recovery
   Future<void> _clearAllAndReschedule() async {
-    Log.w('500 alarm limit hit - clearing all and rescheduling...');
+    print('500 alarm limit hit - clearing all and rescheduling...');
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
@@ -235,13 +238,13 @@ class ScheduleAdhan {
     await prefs.remove('alarmIds');
     flushAlarmIdList();
 
-    Log.i('Cleanup complete.');
+    print('Cleanup complete.');
   }
 
   scheduleAndroid() async {
-    Log.i('from schedule');
+    print('from schedule');
     if (isScheduling) {
-      Log.i("Scheduling in progress, please wait until it's completed...");
+      print("Scheduling in progress, please wait until it's completed...");
       return;
     }
     isScheduling = true;
@@ -252,7 +255,7 @@ class ScheduleAdhan {
     for (String alarmId in previousAlarms) {
       int id = int.parse(alarmId);
       await AndroidAlarmManager.cancel(id);
-      Log.i('Cancelled Alarm Id: $id');
+      print('Cancelled Alarm Id: $id');
     }
     flushAlarmIdList();
     await prefs.remove('alarmIds');
@@ -293,9 +296,10 @@ class ScheduleAdhan {
                 'appLanguage': appLanguage,
                 'is24HourFormat': is24HourFormat
               });
-          Log.i('Pre Notification scheduled for ${prayer.prayerName} at : $preNotificationTime Id: $id');
+          print('Pre Notification scheduled for ${prayer.prayerName} at : $preNotificationTime Id: $id');
         } catch (e, t) {
-          Log.e("Exception oneShotAt", error: e, stackTrace: t);
+          print(t);
+          print(e);
           // Auto-recover from 500 alarm limit
           if (e.toString().contains('500')) {
             await _clearAllAndReschedule();
@@ -342,9 +346,10 @@ class ScheduleAdhan {
                 'appLanguage': appLanguage,
                 'is24HourFormat': is24HourFormat
               });
-          Log.i('Sound ${prayer.sound} Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
+          print('Sound ${prayer.sound} Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
         } catch (e, t) {
-          Log.e("Exception oneShotAt", error: e, stackTrace: t);
+          print(t);
+          print(e);
           // Auto-recover from 500 alarm limit
           if (e.toString().contains('500')) {
             await _clearAllAndReschedule();
@@ -358,14 +363,14 @@ class ScheduleAdhan {
     await prefs.setStringList('alarmIds', newAlarmIds);
     isScheduling = false;
 
-    Log.i(newAlarmIds.toList());
+    print(newAlarmIds.toList());
   }
 
   scheduleIOS() async {
     try {
       // Clear all scheduled notifications
       await flutterLocalNotificationsPlugin.cancelAll();
-      Log.i('Cleared previous Notifications');
+      print('Cleared previous Notifications');
 
       // Retrieve SharedPreferences and prayers list
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -403,7 +408,8 @@ class ScheduleAdhan {
               prayer.mosqueName,
               null,
             );
-            Log.i('Pre Notification scheduled for ${prayer.prayerName} at: $preNotificationTime Id: ${prayer.alarmId + 100000}');
+            print(
+                'Pre Notification scheduled for ${prayer.prayerName} at: $preNotificationTime Id: ${prayer.alarmId + 100000}');
             j++;
           }
 
@@ -462,7 +468,8 @@ class ScheduleAdhan {
                 prayer.sound,
               );
             }
-            Log.i('Notification scheduled for ${prayer.prayerName} at: $notificationTime with Id: ${prayer.alarmId}');
+            print(
+                'Notification scheduled for ${prayer.prayerName} at: $notificationTime with Id: ${prayer.alarmId}');
             j++;
             // }
           }
@@ -472,14 +479,18 @@ class ScheduleAdhan {
         }
       }
     } catch (e, s) {
-      Log.e('Error in scheduleIOS: $e', error: e, stackTrace: s);
+      // Enhanced error logging
+      print('Error in scheduleIOS: $e');
+      print('$s');
     }
     List<PendingNotificationRequest> allPendingNotification =
         await flutterLocalNotificationsPlugin.pendingNotificationRequests();
-    Log.i('All scheduling notifications length:  ${allPendingNotification.length}');
+    print(
+        'All scheduling notifications length:  ${allPendingNotification.length}');
     for (var element in allPendingNotification) {
-      Log.i('element length:  ${element.title} , body: ${element.payload}');
-      Log.i('------------------------------------------------------------------------------------------------------');
+      print('element length:  ${element.title} , body: ${element.payload}');
+      print(
+          '------------------------------------------------------------------------------------------------------');
     }
   }
 
@@ -502,7 +513,8 @@ class ScheduleAdhan {
 
   Future<void> iosNotificationSchedular(int? id, DateTime date, String? title,
       String? body, String? soundId) async {
-    Log.i('--------------------------------------------------schedule sound id : $soundId --------------------------------------------------');
+    print(
+        '--------------------------------------------------schedule sound id : $soundId --------------------------------------------------');
     try {
       final iOSPlatformChannelSpecifics = DarwinNotificationDetails(
           sound: soundId == 'DEFAULT' ? null : soundId,
@@ -536,7 +548,8 @@ class ScheduleAdhan {
             UILocalNotificationDateInterpretation.wallClockTime,
       );
     } catch (e, s) {
-      Log.e("Exception iosNotificationSchedular", error: e, stackTrace: s);
+      print('ERROR: $e');
+      print('stack trace: $s');
     }
   }
 }
