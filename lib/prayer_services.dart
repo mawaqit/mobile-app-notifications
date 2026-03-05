@@ -1,9 +1,7 @@
-// prayer_service.dart
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-
-import 'package:flutter/cupertino.dart';
+import 'package:mawaqit_core_logger/mawaqit_core_logger.dart';
 import 'package:mawaqit_mobile_i18n/gen_l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -58,7 +56,7 @@ class PrayerService {
           }
 
           int alarmId = (index * 1000000) + ((time.year % 100) * 10000) + (time.day * 100) + time.month;
-          print('Alarm ID: $alarmId');
+          Log.i('Alarm ID: $alarmId');
 
           NotificationInfoModel prayer = NotificationInfoModel(
               mosqueName: mosque.name,
@@ -199,8 +197,8 @@ class PrayerService {
           }
         }
       }
-    } catch (e) {
-      debugPrint("Exception in getDeviceSound: $e");
+    } catch (e, stackTrace) {
+      Log.e("Exception in getDeviceSound: $e", error: e, stackTrace: stackTrace);
     }
     return null;
   }

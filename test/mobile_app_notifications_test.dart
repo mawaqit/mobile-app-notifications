@@ -1,11 +1,5 @@
-// import 'package:awesome_notifications/awesome_notifications.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mobile_app_notifications/mobile_app_notifications.dart';
-import 'package:mockito/annotations.dart';
-import 'package:mockito/mockito.dart';
 
-import 'mobile_app_notifications_test.mocks.dart';
 
 // @GenerateMocks([AwesomeNotifications, ScheduleAdhan])
 void main() {
@@ -39,16 +33,16 @@ void main() {
     });
 
     test('should handle pre-notification correctly', () async {
-      final data = {
-        'index': 0,
-        'sound': 'mawaqit_id',
-        'mosque': 'Test Mosque',
-        'prayer': 'Test Prayer',
-        'time': '10',
-        'isPreNotification': true,
-        'minutesToAthan': '10 minutes',
-        'notificationBeforeShuruq': 0,
-      };
+      // final data = {
+      //   'index': 0,
+      //   'sound': 'mawaqit_id',
+      //   'mosque': 'Test Mosque',
+      //   'prayer': 'Test Prayer',
+      //   'time': '10',
+      //   'isPreNotification': true,
+      //   'minutesToAthan': '10 minutes',
+      //   'notificationBeforeShuruq': 0,
+      // };
 
       // when(mockAwesomeNotifications.createNotification(
       //   content: anyNamed('content'),
@@ -69,16 +63,16 @@ void main() {
     });
 
     test('should handle adhan notification correctly', () async {
-      final data = {
-        'index': 0,
-        'sound': 'mawaqit_id.mp3',
-        'mosque': 'Test Mosque',
-        'prayer': 'Test Prayer',
-        'time': '10',
-        'isPreNotification': false,
-        'minutesToAthan': '10 minutes',
-        'notificationBeforeShuruq': 0,
-      };
+      // final data = {
+      //   'index': 0,
+      //   'sound': 'mawaqit_id.mp3',
+      //   'mosque': 'Test Mosque',
+      //   'prayer': 'Test Prayer',
+      //   'time': '10',
+      //   'isPreNotification': false,
+      //   'minutesToAthan': '10 minutes',
+      //   'notificationBeforeShuruq': 0,
+      // };
       //
       // when(mockAwesomeNotifications.createNotification(
       //   content: anyNamed('content'),

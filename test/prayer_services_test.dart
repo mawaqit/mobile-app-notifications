@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mawaqit_core_logger/mawaqit_core_logger.dart';
 import 'package:mobile_app_notifications/models/mosque/detailed_mosque.dart';
 import 'package:mobile_app_notifications/models/notification/notification_info_model.dart';
 import 'package:mobile_app_notifications/models/prayers/prayer_notification.dart';
@@ -25,8 +26,8 @@ void main() {
       var result =
           await mockPrayerService.getPrayerDataByIndex(mockDetailedMosque, 0);
 
-      print('Test: Notification sound is not SILENT');
-      print('Expected: Not null, actual: ${result!.notificationSound}');
+      Log.i('Test: Notification sound is not SILENT');
+      Log.i('Expected: Not null, actual: ${result!.notificationSound}');
       expect(result, isNotNull);
       expect(result.notificationSound, 'DEFAULT');
     });
@@ -40,8 +41,8 @@ void main() {
       var result =
           await mockPrayerService.getPrayerDataByIndex(mockDetailedMosque, 0);
 
-      print('Test: Notification sound is SILENT');
-      print('Expected: null, actual: ${result!.notificationSound}');
+      Log.i('Test: Notification sound is SILENT');
+      Log.i('Expected: null, actual: ${result!.notificationSound}');
       expect(result, isNotNull);
       expect(result.notificationSound, 'SILENT');
     });
