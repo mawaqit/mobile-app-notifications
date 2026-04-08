@@ -134,10 +134,12 @@ class PrayerService {
     var index = prayerKeys.indexOf(key);
 
     if (index == 6) {
-      var calendar = mosque.imsakCalendar!;
+      if (mosque.imsakCalendar == null) return null;
+      var imsakCalendar = mosque.imsakCalendar!;
 
       var monthCalendar =
-          (calendar[now.month - 1] as Map<String, dynamic>).values.toList();
+          (imsakCalendar[now.month - 1] as Map<String, dynamic>).values.toList();
+      if (monthCalendar.isEmpty || now.day - 1 >= monthCalendar.length) return null;
       var prayerTime = monthCalendar[now.day - 1];
 
       var todayTime = DateTime(
@@ -153,8 +155,10 @@ class PrayerService {
     if (calendar != null) {
       var monthCalendar =
           (calendar[now.month - 1] as Map<String, dynamic>).values.toList();
+      if (monthCalendar.isEmpty || now.day - 1 >= monthCalendar.length) return null;
       var todayTimes = monthCalendar[now.day - 1];
 
+      if (todayTimes == null || index >= todayTimes.length) return null;
       var prayerTime = todayTimes[index];
 
       var todayTime = DateTime(
