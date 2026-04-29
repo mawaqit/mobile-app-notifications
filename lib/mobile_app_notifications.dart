@@ -17,10 +17,43 @@ import 'package:timezone/data/latest_all.dart' as tzl;
 import 'package:timezone/timezone.dart' as tz;
 
 var flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+const Duration _staleAlarmGracePeriod = Duration(minutes: 10);
+
+int? _readEpochMillis(Map<String, dynamic> data, String key) {
+  final dynamic value = data[key];
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return null;
+}
+
+bool _isAlarmStillRelevant(Map<String, dynamic> data) {
+  final now = DateTime.now().millisecondsSinceEpoch;
+  final scheduledAtMillis = _readEpochMillis(data, 'scheduledAtMillis');
+  final prayerAtMillis = _readEpochMillis(data, 'prayerAtMillis');
+  final isPreNotification = data['isPreNotification'] == true;
+
+  // Backward compatibility for already-scheduled alarms that don't carry timestamps yet.
+  if (scheduledAtMillis == null || prayerAtMillis == null) {
+    return true;
+  }
+
+  if (isPreNotification) {
+    return now >= scheduledAtMillis && now < prayerAtMillis;
+  }
+
+  return now >= scheduledAtMillis &&
+      now <= prayerAtMillis + _staleAlarmGracePeriod.inMilliseconds;
+}
 
 @pragma('vm:entry-point')
 void ringAlarm(int id, Map<String, dynamic> data) async {
   Log.i('from ringAlarm');
+  if (!_isAlarmStillRelevant(data)) {
+    Log.w('Skipping stale alarm $id');
+    ScheduleAdhan.instance.schedule();
+    return;
+  }
+
   String sound = data['sound'];
   String mosque = data['mosque'];
   String prayer = data['prayer'];
@@ -263,19 +296,23 @@ class ScheduleAdhan {
     for (var i = 0; i < prayersList.length; i++) {
       var prayer = prayersList[i];
 
-      String minutesToAthan = await PrayersName().getStringText(prayer.notificationBeforeAthan);
+      String minutesToAthan =
+          await PrayersName().getStringText(prayer.notificationBeforeAthan);
       //Fetch App Language
       String appLanguage = await PrayersName().getLanguage();
       //Fetch App time format
       bool is24HourFormat = await PrayerTimeFormat().get24HoursFormatSetting();
       //for Pre notification
-      var preNotificationTime = prayer.time!.subtract(Duration(minutes: prayer.notificationBeforeAthan));
+      var preNotificationTime = prayer.time!
+          .subtract(Duration(minutes: prayer.notificationBeforeAthan));
 
-      if (prayer.notificationBeforeAthan != 0 && preNotificationTime.isAfter(DateTime.now())) {
+      if (prayer.notificationBeforeAthan != 0 &&
+          preNotificationTime.isAfter(DateTime.now())) {
         var id = (prayer.alarmId + 100000).toString();
         newAlarmIds.add(id);
         try {
-          await AndroidAlarmManager.oneShotAt(preNotificationTime, int.parse(id), ringAlarm,
+          await AndroidAlarmManager.oneShotAt(
+              preNotificationTime, int.parse(id), ringAlarm,
               alarmClock: true,
               allowWhileIdle: true,
               exact: true,
@@ -291,9 +328,12 @@ class ScheduleAdhan {
                 'notificationBeforeShuruq': 0,
                 'sound_type': prayer.soundType,
                 'appLanguage': appLanguage,
-                'is24HourFormat': is24HourFormat
+                'is24HourFormat': is24HourFormat,
+                'scheduledAtMillis': preNotificationTime.millisecondsSinceEpoch,
+                'prayerAtMillis': prayer.time!.millisecondsSinceEpoch,
               });
-          Log.i('Pre Notification scheduled for ${prayer.prayerName} at : $preNotificationTime Id: $id');
+          Log.i(
+              'Pre Notification scheduled for ${prayer.prayerName} at : $preNotificationTime Id: $id');
         } catch (e, t) {
           Log.e("Exception oneShotAt", error: e, stackTrace: t);
           // Auto-recover from 500 alarm limit
@@ -312,18 +352,22 @@ class ScheduleAdhan {
 
       int index = await PrayersName().getPrayerIndex(prayer.prayerName ?? '');
       if (index == 1) {
-        notificationBeforeShuruq = prefs.getInt('notificationBeforeShuruq') ?? 0;
+        notificationBeforeShuruq =
+            prefs.getInt('notificationBeforeShuruq') ?? 0;
 
-        notificationTime = prayer.time!.subtract(Duration(minutes: notificationBeforeShuruq));
+        notificationTime =
+            prayer.time!.subtract(Duration(minutes: notificationBeforeShuruq));
       } else {
         notificationTime = prayer.time!;
         notificationBeforeShuruq = 0;
       }
 
-      if (prayer.sound != 'SILENT' && notificationTime.isAfter(DateTime.now())) {
+      if (prayer.sound != 'SILENT' &&
+          notificationTime.isAfter(DateTime.now())) {
         newAlarmIds.add(prayer.alarmId.toString());
         try {
-          await AndroidAlarmManager.oneShotAt(notificationTime, prayer.alarmId, ringAlarm,
+          await AndroidAlarmManager.oneShotAt(
+              notificationTime, prayer.alarmId, ringAlarm,
               alarmClock: true,
               allowWhileIdle: true,
               exact: true,
@@ -340,9 +384,12 @@ class ScheduleAdhan {
                 'notificationBeforeShuruq': notificationBeforeShuruq,
                 'sound_type': prayer.soundType,
                 'appLanguage': appLanguage,
-                'is24HourFormat': is24HourFormat
+                'is24HourFormat': is24HourFormat,
+                'scheduledAtMillis': notificationTime.millisecondsSinceEpoch,
+                'prayerAtMillis': prayer.time!.millisecondsSinceEpoch,
               });
-          Log.i('Sound ${prayer.sound} Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
+          Log.i(
+              'Sound ${prayer.sound} Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
         } catch (e, t) {
           Log.e("Exception oneShotAt", error: e, stackTrace: t);
           // Auto-recover from 500 alarm limit
@@ -403,7 +450,8 @@ class ScheduleAdhan {
               prayer.mosqueName,
               null,
             );
-            Log.i('Pre Notification scheduled for ${prayer.prayerName} at: $preNotificationTime Id: ${prayer.alarmId + 100000}');
+            Log.i(
+                'Pre Notification scheduled for ${prayer.prayerName} at: $preNotificationTime Id: ${prayer.alarmId + 100000}');
             j++;
           }
 
@@ -462,7 +510,8 @@ class ScheduleAdhan {
                 prayer.sound,
               );
             }
-            Log.i('Notification scheduled for ${prayer.prayerName} at: $notificationTime with Id: ${prayer.alarmId}');
+            Log.i(
+                'Notification scheduled for ${prayer.prayerName} at: $notificationTime with Id: ${prayer.alarmId}');
             j++;
             // }
           }
@@ -476,10 +525,12 @@ class ScheduleAdhan {
     }
     List<PendingNotificationRequest> allPendingNotification =
         await flutterLocalNotificationsPlugin.pendingNotificationRequests();
-    Log.i('All scheduling notifications length:  ${allPendingNotification.length}');
+    Log.i(
+        'All scheduling notifications length:  ${allPendingNotification.length}');
     for (var element in allPendingNotification) {
       Log.i('element length:  ${element.title} , body: ${element.payload}');
-      Log.i('------------------------------------------------------------------------------------------------------');
+      Log.i(
+          '------------------------------------------------------------------------------------------------------');
     }
   }
 
@@ -502,7 +553,8 @@ class ScheduleAdhan {
 
   Future<void> iosNotificationSchedular(int? id, DateTime date, String? title,
       String? body, String? soundId) async {
-    Log.i('--------------------------------------------------schedule sound id : $soundId --------------------------------------------------');
+    Log.i(
+        '--------------------------------------------------schedule sound id : $soundId --------------------------------------------------');
     try {
       final iOSPlatformChannelSpecifics = DarwinNotificationDetails(
           sound: soundId == 'DEFAULT' ? null : soundId,
