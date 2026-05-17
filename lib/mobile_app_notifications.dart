@@ -133,6 +133,11 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       audioAttributesUsage: AudioAttributesUsage.alarm,
       visibility: NotificationVisibility.public,
       category: AndroidNotificationCategory.alarm,
+      // Fullscreen intent forces the OS to surface the adhan notification
+      // immediately and bypasses background-launch restrictions on
+      // aggressive OEMs (ColorOS, MIUI, EMUI). Only applied to the actual
+      // adhan — pre-notifications stay as regular heads-up alerts.
+      fullScreenIntent: !isPreNotification,
     );
 
     final NotificationDetails platformChannelSpecifics =
