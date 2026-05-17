@@ -3,6 +3,7 @@ library mobile_app_notifications;
 import 'dart:io';
 
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:intl/intl.dart';
@@ -18,6 +19,18 @@ import 'package:timezone/timezone.dart' as tz;
 
 var flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 const Duration _staleAlarmGracePeriod = Duration(minutes: 10);
+
+/// Native adhan dispatcher channel — routes scheduling through
+/// AlarmManager.setAlarmClock + PendingIntent.getActivity. Used when the
+/// app-side feature flag `useNativeAdhanScheduler` is true. The host app
+/// (Android) is responsible for registering the corresponding handler.
+const MethodChannel _adhanDispatcherChannel =
+    MethodChannel('com.kanout.mawaqit/adhan_dispatcher');
+
+/// SharedPreferences key for the feature flag. Toggled by the app via the
+/// helpers in Notifications provider; the package reads it synchronously
+/// at the top of scheduleAndroid().
+const String _useNativeAdhanSchedulerKey = 'useNativeAdhanScheduler';
 
 int? _readEpochMillis(Map<String, dynamic> data, String key) {
   final dynamic value = data[key];
@@ -285,6 +298,13 @@ class ScheduleAdhan {
     isScheduling = true;
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
+    // TODO(revert before merging to main): default flipped to `true` on the
+    // feat/native-adhan-dispatcher branch so any build automatically uses
+    // the native firing path for QA on ColorOS/MIUI/etc. Production should
+    // ship with `?? false` until the path is validated.
+    final bool useNative = prefs.getBool(_useNativeAdhanSchedulerKey) ?? true;
+    Log.i('useNativeAdhanScheduler=$useNative');
+
     List<String> previousAlarms = prefs.getStringList('alarmIds') ?? [];
 
     for (String alarmId in previousAlarms) {
@@ -295,6 +315,15 @@ class ScheduleAdhan {
     flushAlarmIdList();
     await prefs.remove('alarmIds');
     await prefs.setStringList('alarmIds', []);
+
+    // Wipe native-side alarms too — covers the case where the user has just
+    // toggled the feature flag, so we don't leave stale alarms on the other
+    // path. Safe no-op when the native side has nothing tracked.
+    try {
+      await _adhanDispatcherChannel.invokeMethod('cancelAllAdhans');
+    } catch (e) {
+      Log.w('cancelAllAdhans failed (ignored): $e');
+    }
 
     var prayersList = await PrayerService().getPrayers();
 
@@ -315,38 +344,68 @@ class ScheduleAdhan {
           preNotificationTime.isAfter(DateTime.now())) {
         var id = (prayer.alarmId + 100000).toString();
         newAlarmIds.add(id);
-        try {
-          await AndroidAlarmManager.oneShotAt(
-              preNotificationTime, int.parse(id), ringAlarm,
-              alarmClock: true,
-              allowWhileIdle: true,
-              exact: true,
-              wakeup: true,
-              rescheduleOnReboot: true,
-              params: {
-                'sound': 'mawaqit_id',
-                'mosque': prayer.mosqueName,
-                'prayer': prayer.prayerName,
-                'time': prayer.notificationBeforeAthan.toString(),
-                'isPreNotification': true,
-                'minutesToAthan': minutesToAthan,
-                'notificationBeforeShuruq': 0,
-                'sound_type': prayer.soundType,
-                'appLanguage': appLanguage,
-                'is24HourFormat': is24HourFormat,
-                'scheduledAtMillis': preNotificationTime.millisecondsSinceEpoch,
-                'prayerAtMillis': prayer.time!.millisecondsSinceEpoch,
-              });
-          Log.i(
-              'Pre Notification scheduled for ${prayer.prayerName} at : $preNotificationTime Id: $id');
-        } catch (e, t) {
-          Log.e("Exception oneShotAt", error: e, stackTrace: t);
-          // Auto-recover from 500 alarm limit
-          if (e.toString().contains('500')) {
-            await _clearAllAndReschedule();
-            isScheduling = false;
-            await scheduleAndroid();
-            return;
+        final preBaseChannelId = (prayer.prayerName ?? '').toLowerCase();
+        final preChannelId = 'Pre $preBaseChannelId ';
+        final preChannelName = 'Pre $preBaseChannelId ';
+        final preTitle =
+            '${prayer.notificationBeforeAthan} $minutesToAthan ${prayer.prayerName ?? ''}';
+
+        if (useNative) {
+          try {
+            await _adhanDispatcherChannel
+                .invokeMethod('scheduleAdhan', <String, dynamic>{
+              'notificationId': int.parse(id),
+              'fireAtMillis': preNotificationTime.millisecondsSinceEpoch,
+              'prayerAtMillis': prayer.time!.millisecondsSinceEpoch,
+              'isPreNotification': true,
+              'prayerName': prayer.prayerName ?? '',
+              'mosqueName': prayer.mosqueName ?? '',
+              'soundName': 'SILENT',
+              'soundType': 'none',
+              'channelId': preChannelId,
+              'channelName': preChannelName,
+              'notificationTitle': preTitle,
+              'notificationBody': prayer.mosqueName ?? '',
+            });
+            Log.i(
+                'Native pre-notif scheduled for ${prayer.prayerName} at $preNotificationTime id=$id');
+          } catch (e, t) {
+            Log.e('Exception scheduleAdhan (pre)', error: e, stackTrace: t);
+          }
+        } else {
+          try {
+            await AndroidAlarmManager.oneShotAt(
+                preNotificationTime, int.parse(id), ringAlarm,
+                alarmClock: true,
+                allowWhileIdle: true,
+                exact: true,
+                wakeup: true,
+                rescheduleOnReboot: true,
+                params: {
+                  'sound': 'mawaqit_id',
+                  'mosque': prayer.mosqueName,
+                  'prayer': prayer.prayerName,
+                  'time': prayer.notificationBeforeAthan.toString(),
+                  'isPreNotification': true,
+                  'minutesToAthan': minutesToAthan,
+                  'notificationBeforeShuruq': 0,
+                  'sound_type': prayer.soundType,
+                  'appLanguage': appLanguage,
+                  'is24HourFormat': is24HourFormat,
+                  'scheduledAtMillis': preNotificationTime.millisecondsSinceEpoch,
+                  'prayerAtMillis': prayer.time!.millisecondsSinceEpoch,
+                });
+            Log.i(
+                'Pre Notification scheduled for ${prayer.prayerName} at : $preNotificationTime Id: $id');
+          } catch (e, t) {
+            Log.e("Exception oneShotAt", error: e, stackTrace: t);
+            // Auto-recover from 500 alarm limit
+            if (e.toString().contains('500')) {
+              await _clearAllAndReschedule();
+              isScheduling = false;
+              await scheduleAndroid();
+              return;
+            }
           }
         }
       }
@@ -370,39 +429,87 @@ class ScheduleAdhan {
       if (prayer.sound != 'SILENT' &&
           notificationTime.isAfter(DateTime.now())) {
         newAlarmIds.add(prayer.alarmId.toString());
-        try {
-          await AndroidAlarmManager.oneShotAt(
-              notificationTime, prayer.alarmId, ringAlarm,
-              alarmClock: true,
-              allowWhileIdle: true,
-              exact: true,
-              wakeup: true,
-              rescheduleOnReboot: true,
-              params: {
-                'index': index,
-                'sound': prayer.sound,
-                'mosque': prayer.mosqueName,
-                'prayer': prayer.prayerName,
-                'time': prayerTime,
-                'isPreNotification': false,
-                'minutesToAthan': '',
-                'notificationBeforeShuruq': notificationBeforeShuruq,
-                'sound_type': prayer.soundType,
-                'appLanguage': appLanguage,
-                'is24HourFormat': is24HourFormat,
-                'scheduledAtMillis': notificationTime.millisecondsSinceEpoch,
-                'prayerAtMillis': prayer.time!.millisecondsSinceEpoch,
-              });
-          Log.i(
-              'Sound ${prayer.sound} Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
-        } catch (e, t) {
-          Log.e("Exception oneShotAt", error: e, stackTrace: t);
-          // Auto-recover from 500 alarm limit
-          if (e.toString().contains('500')) {
-            await _clearAllAndReschedule();
-            isScheduling = false;
-            await scheduleAndroid();
-            return;
+        final mainBaseChannelId = (prayer.prayerName ?? '').toLowerCase();
+        final mainChannelId =
+            '$mainBaseChannelId Adhan ${prayer.sound ?? ''}';
+        final mainChannelName = '$mainBaseChannelId Adhan';
+        // Title mirrors the format the Dart-side ringAlarm builds. For
+        // Shuruq (index==1) with a configured notificationBeforeShuruq we
+        // use the "$prayer in X minutes" form; otherwise the standard
+        // "$prayer $time" form.
+        String mainTitle;
+        if (notificationBeforeShuruq != 0) {
+          final inText = await PrayersName().getInText();
+          final minutesLabel = await PrayersName()
+              .getMinutesText(notificationBeforeShuruq);
+          mainTitle =
+              '${prayer.prayerName ?? ''} $inText $notificationBeforeShuruq $minutesLabel';
+        } else {
+          final formattedTime = PrayerTimeFormat().getFormattedPrayerTime(
+            prayerTime: prayerTime,
+            timeFormat: is24HourFormat,
+            selectedLanguage: appLanguage,
+          );
+          mainTitle = '${prayer.prayerName ?? ''}  $formattedTime';
+        }
+
+        if (useNative) {
+          try {
+            await _adhanDispatcherChannel
+                .invokeMethod('scheduleAdhan', <String, dynamic>{
+              'notificationId': prayer.alarmId,
+              'fireAtMillis': notificationTime.millisecondsSinceEpoch,
+              'prayerAtMillis': prayer.time!.millisecondsSinceEpoch,
+              'isPreNotification': false,
+              'prayerName': prayer.prayerName ?? '',
+              'mosqueName': prayer.mosqueName ?? '',
+              'soundName': prayer.sound ?? '',
+              'soundType': prayer.soundType ?? 'none',
+              'channelId': mainChannelId,
+              'channelName': mainChannelName,
+              'notificationTitle': mainTitle,
+              'notificationBody': prayer.mosqueName ?? '',
+            });
+            Log.i(
+                'Native adhan scheduled for ${prayer.prayerName} at $notificationTime id=${prayer.alarmId}');
+          } catch (e, t) {
+            Log.e('Exception scheduleAdhan (main)', error: e, stackTrace: t);
+          }
+        } else {
+          try {
+            await AndroidAlarmManager.oneShotAt(
+                notificationTime, prayer.alarmId, ringAlarm,
+                alarmClock: true,
+                allowWhileIdle: true,
+                exact: true,
+                wakeup: true,
+                rescheduleOnReboot: true,
+                params: {
+                  'index': index,
+                  'sound': prayer.sound,
+                  'mosque': prayer.mosqueName,
+                  'prayer': prayer.prayerName,
+                  'time': prayerTime,
+                  'isPreNotification': false,
+                  'minutesToAthan': '',
+                  'notificationBeforeShuruq': notificationBeforeShuruq,
+                  'sound_type': prayer.soundType,
+                  'appLanguage': appLanguage,
+                  'is24HourFormat': is24HourFormat,
+                  'scheduledAtMillis': notificationTime.millisecondsSinceEpoch,
+                  'prayerAtMillis': prayer.time!.millisecondsSinceEpoch,
+                });
+            Log.i(
+                'Sound ${prayer.sound} Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');
+          } catch (e, t) {
+            Log.e("Exception oneShotAt", error: e, stackTrace: t);
+            // Auto-recover from 500 alarm limit
+            if (e.toString().contains('500')) {
+              await _clearAllAndReschedule();
+              isScheduling = false;
+              await scheduleAndroid();
+              return;
+            }
           }
         }
       }
