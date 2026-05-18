@@ -2,7 +2,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 /// Shared `flutter_local_notifications` instance used by every code path that
 /// posts, schedules, cancels, or queries notifications in this package.
-var flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
 
 Future<void> init() async {
   const initializationSettingsIOS = DarwinInitializationSettings(

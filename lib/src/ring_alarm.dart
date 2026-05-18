@@ -39,7 +39,6 @@ bool _isAlarmStillRelevant(Map<String, dynamic> data) {
 
 @pragma('vm:entry-point')
 void ringAlarm(int id, Map<String, dynamic> data) async {
-  Log.i('from ringAlarm');
   if (!_isAlarmStillRelevant(data)) {
     Log.w('Skipping stale alarm $id');
     ScheduleAdhan.instance.schedule();

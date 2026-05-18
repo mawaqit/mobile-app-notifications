@@ -147,21 +147,13 @@ Future<void> scheduleIOS() async {
   } catch (e, s) {
     Log.e('Error in scheduleIOS: $e', error: e, stackTrace: s);
   }
-  List<PendingNotificationRequest> allPendingNotification =
+  final pending =
       await flutterLocalNotificationsPlugin.pendingNotificationRequests();
-  Log.i(
-      'All scheduling notifications length:  ${allPendingNotification.length}');
-  for (var element in allPendingNotification) {
-    Log.i('element length:  ${element.title} , body: ${element.payload}');
-    Log.i(
-        '------------------------------------------------------------------------------------------------------');
-  }
+  Log.i('iOS pending notifications count: ${pending.length}');
 }
 
 Future<void> iosNotificationSchedular(int? id, DateTime date, String? title,
     String? body, String? soundId) async {
-  Log.i(
-      '--------------------------------------------------schedule sound id : $soundId --------------------------------------------------');
   try {
     final iOSPlatformChannelSpecifics = DarwinNotificationDetails(
         sound: soundId == 'DEFAULT' ? null : soundId,

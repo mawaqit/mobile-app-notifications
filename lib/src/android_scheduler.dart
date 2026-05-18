@@ -19,7 +19,9 @@ Future<void> initAlarmManager() async {
   await AndroidAlarmManager.initialize();
 }
 
-void _flushAlarmIdList() => _newAlarmIds = [];
+void _flushAlarmIdList() {
+  _newAlarmIds = [];
+}
 
 /// Migration: Clear all old alarms on first launch after update
 /// This prevents orphan alarms from old ID format
@@ -36,14 +38,16 @@ Future<void> migrateOldAlarmIds() async {
       await AndroidAlarmManager.cancel(int.parse(id));
     }
 
-    // Brute force cancel all possible old-format IDs
+    // Brute-force cancel every ID that could have been produced by the old
+    // ID format (`int.parse("$index$day$month")` with index 0–6, day 1–31,
+    // month 1–12). There's no record of which IDs were actually scheduled by
+    // the previous version, so we sweep the entire possible space — ~2600
+    // cancel calls — once, then never run again (gated by alarms_migrated_v2).
     for (int index = 0; index < 7; index++) {
       for (int day = 1; day <= 31; day++) {
         for (int month = 1; month <= 12; month++) {
-          // Old main ID format: index + day + month as string
           int oldMainId = int.parse('$index$day$month');
-          // Old pre-notification ID format: "1" + mainId
-          int oldPreId = int.parse('1$oldMainId');
+          int oldPreId = int.parse('1$oldMainId'); // pre-notif prefix "1"
           await AndroidAlarmManager.cancel(oldMainId);
           await AndroidAlarmManager.cancel(oldPreId);
         }
@@ -79,7 +83,11 @@ Future<void> _clearAllAndReschedule() async {
     }
   }
 
-  // Brute force cancel possible IDs
+  // Brute-force sweep ~10,000 alarm IDs across the lower half of the ID space
+  // (i = 0..999_990 step 10_000, j = 0..99 → IDs 0, 1, … 99, 10_000, 10_001 …).
+  // Recovery path only — Android caps scheduled alarms at 500 per app and the
+  // tracked `alarmIds` list may have drifted; this catches anything not tracked
+  // so we can reschedule from a clean state.
   for (int i = 0; i < 1000000; i += 10000) {
     for (int j = 0; j < 100; j++) {
       await AndroidAlarmManager.cancel(i + j);
@@ -94,7 +102,6 @@ Future<void> _clearAllAndReschedule() async {
 }
 
 Future<void> scheduleAndroid() async {
-  Log.i('from schedule');
   if (_isScheduling) {
     Log.i("Scheduling in progress, please wait until it's completed...");
     return;
