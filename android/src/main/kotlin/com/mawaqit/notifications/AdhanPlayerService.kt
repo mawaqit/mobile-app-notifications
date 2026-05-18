@@ -9,8 +9,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
-import android.media.AudioFocusRequest
-import android.media.AudioManager
 import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
@@ -58,20 +56,8 @@ class AdhanPlayerService : Service() {
 
     private var mediaPlayer: MediaPlayer? = null
 
-    private val audioManager: AudioManager by lazy {
-        getSystemService(Context.AUDIO_SERVICE) as AudioManager
-    }
-    // AudioFocusRequest exists from API 26 only; store as Any? to keep the field shared.
-    private var audioFocusRequest: Any? = null
-    private val audioFocusListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
-        when (focusChange) {
-            AudioManager.AUDIOFOCUS_LOSS,
-            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
-            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
-                Log.d(TAG, "Audio focus lost ($focusChange) — stopping adhan")
-                stopPlaybackAndSelf()
-            }
-        }
+    private val audioFocus: AudioFocusHelper by lazy {
+        AudioFocusHelper(this, mainHandler) { stopPlaybackAndSelf() }
     }
 
     private val vibrator: Vibrator? by lazy {
@@ -138,7 +124,7 @@ class AdhanPlayerService : Service() {
         // fall back to a short vibration and leave the heads-up notification
         // visible. The notification persists (Option X: replaced when the next
         // prayer fires, since both use the fixed NOTIFICATION_ID).
-        if (!requestAudioFocus(attributes)) {
+        if (!audioFocus.request(attributes)) {
             Log.w(TAG, "Audio focus denied — vibrating instead, keeping notification visible")
             vibrateFallback()
             // Persist the heads-up notification past the vibration window; the
@@ -231,7 +217,7 @@ class AdhanPlayerService : Service() {
     private fun stopPlaybackAndSelf() {
         mainHandler.removeCallbacksAndMessages(null)
         releasePlayer()
-        abandonAudioFocus()
+        audioFocus.abandon()
         cancelVibration()
         // Cancel the notification explicitly — covers the case where the service
         // had previously detached so stopForeground alone wouldn't remove it.
@@ -255,44 +241,12 @@ class AdhanPlayerService : Service() {
     private fun stopPlaybackAndPersist() {
         mainHandler.removeCallbacksAndMessages(null)
         releasePlayer()
-        abandonAudioFocus()
+        audioFocus.abandon()
         cancelVibration()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             stopForeground(STOP_FOREGROUND_DETACH)
         }
         stopSelf()
-    }
-
-    private fun requestAudioFocus(attributes: AudioAttributes): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE)
-                .setAudioAttributes(attributes)
-                .setOnAudioFocusChangeListener(audioFocusListener, mainHandler)
-                .setAcceptsDelayedFocusGain(false)
-                .build()
-            audioFocusRequest = request
-            audioManager.requestAudioFocus(request) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
-        } else {
-            @Suppress("DEPRECATION")
-            val result = audioManager.requestAudioFocus(
-                audioFocusListener,
-                AudioManager.STREAM_ALARM,
-                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE
-            )
-            result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
-        }
-    }
-
-    private fun abandonAudioFocus() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            (audioFocusRequest as? AudioFocusRequest)?.let {
-                audioManager.abandonAudioFocusRequest(it)
-            }
-            audioFocusRequest = null
-        } else {
-            @Suppress("DEPRECATION")
-            audioManager.abandonAudioFocus(audioFocusListener)
-        }
     }
 
     private fun vibrateFallback() {
