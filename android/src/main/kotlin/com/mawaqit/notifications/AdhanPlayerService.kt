@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
+import android.media.AudioManager
 import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
@@ -56,8 +57,15 @@ class AdhanPlayerService : Service() {
 
     private var mediaPlayer: MediaPlayer? = null
 
+    private val audioManager: AudioManager by lazy {
+        getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    }
+
+    // Focus-loss is most often a phone call interrupting the adhan; we stop
+    // playback but keep the notification visible so the user can still see
+    // which prayer fired once the call ends.
     private val audioFocus: AudioFocusHelper by lazy {
-        AudioFocusHelper(this, mainHandler) { stopPlaybackAndSelf() }
+        AudioFocusHelper(this, mainHandler) { stopPlaybackAndPersist() }
     }
 
     private val vibrator: Vibrator? by lazy {
@@ -96,8 +104,21 @@ class AdhanPlayerService : Service() {
                 val stopLabel = intent?.getStringExtra(EXTRA_STOP_LABEL) ?: "Stop"
                 val defaultTitle = intent?.getStringExtra(EXTRA_DEFAULT_TITLE) ?: "Adhan"
 
-                startAsForeground(title, body, channelName, channelDescription, stopLabel, defaultTitle)
-                startPlayback(sound, soundType, streamUsage)
+                // If the resolved stream will be silenced by the current ringer
+                // state (e.g. user has play-in-silent off + phone is muted),
+                // skip MediaPlayer entirely and omit the Stop action — there's
+                // nothing to stop. The heads-up notification still appears.
+                val audible = isStreamAudible(streamUsage)
+                startAsForeground(
+                    title, body, channelName, channelDescription, stopLabel, defaultTitle,
+                    includeStopAction = audible,
+                )
+                if (audible) {
+                    startPlayback(sound, soundType, streamUsage)
+                } else {
+                    Log.i(TAG, "Stream '$streamUsage' is silenced — visual notification only")
+                    mainHandler.postDelayed({ stopPlaybackAndPersist() }, 3000L)
+                }
             }
         }
         return START_NOT_STICKY
@@ -300,13 +321,24 @@ class AdhanPlayerService : Service() {
         nm.createNotificationChannel(channel)
     }
 
+    /**
+     * Stream is audible right now if it bypasses the ringer (alarm / media) or
+     * the ringer is in normal mode. Ringtone and notification streams are
+     * silenced in silent or vibrate mode.
+     */
+    private fun isStreamAudible(streamUsage: String): Boolean = when (streamUsage.lowercase()) {
+        "alarm", "media" -> true
+        else -> audioManager.ringerMode == AudioManager.RINGER_MODE_NORMAL
+    }
+
     private fun startAsForeground(
         title: String,
         body: String,
         channelName: String,
         channelDescription: String,
         stopLabel: String,
-        defaultTitle: String
+        defaultTitle: String,
+        includeStopAction: Boolean,
     ) {
         ensureNotificationChannel(channelName, channelDescription)
 
@@ -346,7 +378,7 @@ class AdhanPlayerService : Service() {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .apply { contentIntent?.let { setContentIntent(it) } }
             .setDeleteIntent(deletePendingIntent)
-            .addAction(0, stopLabel, stopPendingIntent)
+            .apply { if (includeStopAction) addAction(0, stopLabel, stopPendingIntent) }
             .build()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {

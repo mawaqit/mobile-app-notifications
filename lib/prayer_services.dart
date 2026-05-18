@@ -65,7 +65,8 @@ class PrayerService {
               time: time,
               notificationBeforeAthan: notificationData?.notificationBeforeAthan ?? 0,
               alarmId: alarmId,
-              soundType: obj.soundType.name);
+              soundType: obj.soundType.name,
+              playInSilent: obj.playInSilent);
 
           prayersList.add(prayer);
         }

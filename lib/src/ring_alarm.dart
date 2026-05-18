@@ -56,6 +56,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
   int notificationBeforeShuruq = data['notificationBeforeShuruq'];
   String appLanguage = data['appLanguage'] ?? 'en';
   bool is24HourFormat = data['is24HourFormat'] ?? true;
+  bool playInSilent = data['playInSilent'] ?? false;
 
   String notificationTitle;
   try {
@@ -87,6 +88,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
         soundType: soundType,
         title: notificationTitle,
         body: mosque,
+        playInSilent: playInSilent,
       );
     }
 

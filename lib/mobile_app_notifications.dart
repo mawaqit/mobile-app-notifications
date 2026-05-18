@@ -6,7 +6,6 @@ import 'src/android_scheduler.dart' as android;
 import 'src/ios_scheduler.dart' as ios;
 import 'src/notification_plugin.dart' as plugin;
 
-export 'src/adhan_player_channel.dart' show kAdhanStreamPrefKey;
 export 'src/ring_alarm.dart' show ringAlarm;
 
 /// Public entry point for scheduling and managing prayer-time notifications.

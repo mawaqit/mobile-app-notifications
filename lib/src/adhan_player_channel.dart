@@ -1,45 +1,39 @@
 import 'package:flutter/services.dart';
 import 'package:mawaqit_core_logger/mawaqit_core_logger.dart';
 import 'package:mawaqit_mobile_i18n/gen_l10n/app_localizations.dart';
+import 'package:mobile_app_notifications/helpers/device_ringtone_mode.dart';
 import 'package:mobile_app_notifications/helpers/localization_helper.dart';
 import 'package:mobile_app_notifications/models/prayers/prayer_notification.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-/// SharedPreferences key for the user's audio stream choice.
-/// Allowed values: "alarm" (default), "ringtone", "notification", "media".
-const String kAdhanStreamPrefKey = 'adhan_audio_stream';
 
 const MethodChannel _adhanPlayerChannel =
     MethodChannel('com.mawaqit.notifications/adhan_player');
 
-const Set<String> _kAllowedStreamUsages = {
-  'alarm',
-  'ringtone',
-  'notification',
-  'media',
-};
-
-Future<String> _resolveAdhanStreamUsage() async {
+/// Resolves which Android audio stream the adhan plays on, based on the
+/// per-prayer `playInSilent` preference and the current ringer state.
+///
+///   * playInSilent == false                    → ringtone (respects mute)
+///   * playInSilent == true,  ringer normal     → ringtone (plays normally)
+///   * playInSilent == true,  ringer muted/vibe → alarm    (bypasses mute)
+Future<String> _resolveStreamUsage(bool playInSilent) async {
+  if (!playInSilent) return 'ringtone';
   try {
-    final prefs = await SharedPreferences.getInstance();
-    final value = prefs.getString(kAdhanStreamPrefKey);
-    if (value != null && _kAllowedStreamUsages.contains(value)) {
-      return value;
-    }
+    final isMuted = await DeviceRingtoneMode.isMuted();
+    return isMuted ? 'alarm' : 'ringtone';
   } catch (e, s) {
-    Log.e('resolve stream usage failed', error: e, stackTrace: s);
+    Log.e('Failed reading ringer mode — defaulting to alarm',
+        error: e, stackTrace: s);
+    return 'alarm';
   }
-  return 'alarm';
 }
 
-/// Plays the adhan through the native foreground service (MediaPlayer)
-/// on the user's chosen audio stream. Falls back to a notification-based
-/// sound if the native channel call fails.
+/// Plays the adhan through the native foreground service (MediaPlayer) on the
+/// stream resolved from `playInSilent` + current ringer state.
 Future<void> playAdhanNative({
   required String sound,
   required SoundType soundType,
   required String title,
   required String body,
+  required bool playInSilent,
 }) async {
   String soundArg;
   if (sound == 'DEFAULT') {
@@ -51,7 +45,7 @@ Future<void> playAdhanNative({
     soundArg = sound;
   }
 
-  final streamUsage = await _resolveAdhanStreamUsage();
+  final streamUsage = await _resolveStreamUsage(playInSilent);
   AppLocalizations localizations = await LocalizationHelper.getLocalization();
 
   String channelName = localizations.adhan;
