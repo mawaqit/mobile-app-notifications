@@ -8,7 +8,6 @@ import 'package:mobile_app_notifications/models/prayers/prayer_time_format.dart'
 import 'package:mobile_app_notifications/prayer_services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'notification_plugin.dart';
 import 'ring_alarm.dart';
 
 // Module-level scheduling state (previously instance fields on ScheduleAdhan).
@@ -114,12 +113,6 @@ Future<void> scheduleAndroid() async {
   for (String alarmId in previousAlarms) {
     int id = int.parse(alarmId);
     await AndroidAlarmManager.cancel(id);
-    // Fix C: also clear any shown notification with the same id (pre-notifs
-    // use their alarm id as the notification id). Adhan service notification
-    // uses a fixed id (7733), so cancelling here is a no-op for it.
-    try {
-      await flutterLocalNotificationsPlugin.cancel(id);
-    } catch (_) {}
     Log.i('Cancelled Alarm Id: $id');
   }
   _flushAlarmIdList();
