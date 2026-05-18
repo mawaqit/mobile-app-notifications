@@ -3,10 +3,12 @@ library mobile_app_notifications;
 import 'dart:io';
 
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:intl/intl.dart';
 import 'package:mawaqit_core_logger/mawaqit_core_logger.dart';
+import 'package:mawaqit_mobile_i18n/gen_l10n/app_localizations.dart';
 import 'package:mobile_app_notifications/helpers/device_ringtone_mode.dart';
 import 'package:mobile_app_notifications/models/prayers/prayer_name.dart';
 import 'package:mobile_app_notifications/models/prayers/prayer_notification.dart';
@@ -16,8 +18,37 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tzl;
 import 'package:timezone/timezone.dart' as tz;
 
+import 'helpers/localization_helper.dart';
+
 var flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 const Duration _staleAlarmGracePeriod = Duration(minutes: 10);
+
+/// SharedPreferences key for the user's audio stream choice.
+/// Allowed values: "alarm" (default), "ringtone", "notification", "media".
+const String kAdhanStreamPrefKey = 'adhan_audio_stream';
+
+const MethodChannel _adhanPlayerChannel =
+    MethodChannel('com.mawaqit.notifications/adhan_player');
+
+const Set<String> _kAllowedStreamUsages = {
+  'alarm',
+  'ringtone',
+  'notification',
+  'media',
+};
+
+Future<String> _resolveAdhanStreamUsage() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final value = prefs.getString(kAdhanStreamPrefKey);
+    if (value != null && _kAllowedStreamUsages.contains(value)) {
+      return value;
+    }
+  } catch (e, s) {
+    Log.e('resolve stream usage failed', error: e, stackTrace: s);
+  }
+  return 'alarm';
+}
 
 int? _readEpochMillis(Map<String, dynamic> data, String key) {
   final dynamic value = data[key];
@@ -66,90 +97,125 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
   String appLanguage = data['appLanguage'] ?? 'en';
   bool is24HourFormat = data['is24HourFormat'] ?? true;
 
-  String? adhanSound;
   String notificationTitle;
   try {
     if (isPreNotification) {
       notificationTitle = '$time $minutesToAthan $prayer';
+    } else if (notificationBeforeShuruq != 0) {
+      String inText = await PrayersName().getInText();
+      String minutes =
+          await PrayersName().getMinutesText(notificationBeforeShuruq);
+      notificationTitle = '$prayer $inText $notificationBeforeShuruq $minutes';
     } else {
-      if (notificationBeforeShuruq != 0) {
-        String inText = await PrayersName().getInText();
-        String minutes =
-            await PrayersName().getMinutesText(notificationBeforeShuruq);
-        notificationTitle =
-            '$prayer $inText $notificationBeforeShuruq $minutes';
-      } else {
-        String formattedTime = PrayerTimeFormat().getFormattedPrayerTime(
-            prayerTime: time,
-            timeFormat: is24HourFormat,
-            selectedLanguage: appLanguage);
-        notificationTitle = '$prayer  $formattedTime';
-      }
-
-      if (sound == 'DEFAULT') {
-        adhanSound = null;
-      } else if (soundType == SoundType.customSound) {
-        adhanSound = sound.substring(0, sound.length - 4);
-      } else {
-        adhanSound = sound;
-      }
+      String formattedTime = PrayerTimeFormat().getFormattedPrayerTime(
+          prayerTime: time,
+          timeFormat: is24HourFormat,
+          selectedLanguage: appLanguage);
+      notificationTitle = '$prayer  $formattedTime';
     }
 
-    bool mute = await DeviceRingtoneMode.isMuted();
-
-    Log.i('is mute: $mute');
-
-    // Assign per-prayer channel ID
-    String baseChannelId = prayer.toLowerCase(); // e.g., 'fajr', 'dhuhr'
-    String channelName =
-        isPreNotification ? 'Pre $baseChannelId ' : '$baseChannelId Adhan';
-    String channelId = isPreNotification
-        ? 'Pre $baseChannelId '
-        : '$baseChannelId Adhan $sound';
-
-    Log.t(" ----- ------- -- - - - --- -channelId: $channelId");
-    final AndroidNotificationDetails androidPlatformChannelSpecifics =
-        AndroidNotificationDetails(
-      mute ? 'Silent $channelId' : channelId,
-      mute ? 'Silent' : channelName,
-      channelDescription: isPreNotification
-          ? 'Pre Adhan notifications for $prayer'
-          : 'Adhan notifications for $prayer',
-      importance: Importance.max,
-      priority: Priority.high,
-      playSound: !isPreNotification || !mute,
-      sound: (mute)
-          ? const RawResourceAndroidNotificationSound('silent_sound')
-          : isPreNotification
-              ? null
-              : soundType == SoundType.customSound
-                  ? RawResourceAndroidNotificationSound(adhanSound)
-                  : UriAndroidNotificationSound(adhanSound ?? ''),
-      enableVibration: true,
-      largeIcon: const DrawableResourceAndroidBitmap('logo'),
-      icon: 'notification_icon',
-      onlyAlertOnce: false,
-      ticker: 'ticker',
-      audioAttributesUsage: AudioAttributesUsage.alarm,
-      visibility: NotificationVisibility.public,
-      category: AndroidNotificationCategory.alarm,
-    );
-
-    final NotificationDetails platformChannelSpecifics =
-        NotificationDetails(android: androidPlatformChannelSpecifics);
-
-    await flutterLocalNotificationsPlugin.show(
-      id,
-      notificationTitle,
-      mosque,
-      platformChannelSpecifics,
-    );
+    if (isPreNotification) {
+      await _showPreNotification(id, prayer, notificationTitle, mosque);
+    } else {
+      // Fix A: clear the matching pre-notification (if still in the tray) before
+      // the adhan service posts its own notification. Pre-notif ID = adhan ID + 100000.
+      try {
+        await flutterLocalNotificationsPlugin.cancel(id + 100000);
+      } catch (_) {}
+      await _playAdhanNative(
+        sound: sound,
+        soundType: soundType,
+        title: notificationTitle,
+        body: mosque,
+      );
+    }
 
     ScheduleAdhan scheduleAdhan = ScheduleAdhan.instance;
     scheduleAdhan.schedule();
   } catch (e, t) {
     Log.e("Exception ringAlarm", error: e, stackTrace: t);
   }
+}
+
+/// Plays the adhan through the native foreground service (MediaPlayer)
+/// on the user's chosen audio stream. Falls back to a notification-based
+/// sound if the native channel call fails.
+Future<void> _playAdhanNative({
+  required String sound,
+  required SoundType soundType,
+  required String title,
+  required String body,
+}) async {
+  String soundArg;
+  if (sound == 'DEFAULT') {
+    soundArg = '';
+  } else if (soundType == SoundType.customSound) {
+    // Strip the file extension — service uses resources.getIdentifier on a bare name
+    soundArg = sound.length > 4 ? sound.substring(0, sound.length - 4) : sound;
+  } else {
+    soundArg = sound;
+  }
+
+  final streamUsage = await _resolveAdhanStreamUsage();
+  AppLocalizations localizations = await LocalizationHelper.getLocalization();
+
+  String channelName = localizations.adhan;
+  String channelDescription = localizations.plays_adhan_prayer_arrives;
+  String stopLabel = localizations.stop;
+  String defaultTitle = localizations.adhan;
+
+  try {
+    await _adhanPlayerChannel.invokeMethod<void>('playAdhan', {
+      'sound': soundArg,
+      'soundType': soundType.name,
+      'streamUsage': streamUsage,
+      'title': title,
+      'body': body,
+      'channelName': channelName,
+      'channelDescription': channelDescription,
+      'stopLabel': stopLabel,
+      'defaultTitle': defaultTitle,
+    });
+    Log.i('Adhan dispatched to native player (usage=$streamUsage)');
+  } catch (e, s) {
+    Log.e('Native adhan playback failed — no audible fallback',
+        error: e, stackTrace: s);
+  }
+}
+
+/// Pre-notification (heads-up before adhan). Stays on the notification path —
+/// it's short, doesn't play the adhan, and respects ringer mute.
+Future<void> _showPreNotification(
+    int id, String prayer, String title, String body) async {
+  final bool mute = await DeviceRingtoneMode.isMuted();
+  final String baseChannelId = prayer.toLowerCase();
+  final String channelId = 'Pre $baseChannelId ';
+
+  final androidDetails = AndroidNotificationDetails(
+    mute ? 'Silent $channelId' : channelId,
+    mute ? 'Silent' : channelId,
+    channelDescription: 'Pre Adhan notifications for $prayer',
+    importance: Importance.max,
+    priority: Priority.high,
+    playSound: !mute,
+    sound:
+        mute ? const RawResourceAndroidNotificationSound('silent_sound') : null,
+    enableVibration: true,
+    largeIcon: const DrawableResourceAndroidBitmap('logo'),
+    icon: 'notification_icon',
+    onlyAlertOnce: false,
+    ticker: 'ticker',
+    audioAttributesUsage: AudioAttributesUsage.alarm,
+    visibility: NotificationVisibility.public,
+    category: AndroidNotificationCategory.alarm,
+  );
+
+  await flutterLocalNotificationsPlugin.show(
+    id,
+    title,
+    body,
+    NotificationDetails(android: androidDetails),
+  );
 }
 
 class ScheduleAdhan {
@@ -285,6 +351,12 @@ class ScheduleAdhan {
     for (String alarmId in previousAlarms) {
       int id = int.parse(alarmId);
       await AndroidAlarmManager.cancel(id);
+      // Fix C: also clear any shown notification with the same id (pre-notifs
+      // use their alarm id as the notification id). Adhan service notification
+      // uses a fixed id (7733), so cancelling here is a no-op for it.
+      try {
+        await flutterLocalNotificationsPlugin.cancel(id);
+      } catch (_) {}
       Log.i('Cancelled Alarm Id: $id');
     }
     flushAlarmIdList();
