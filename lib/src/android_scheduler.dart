@@ -3,12 +3,11 @@ import 'dart:io';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:mawaqit_core_logger/mawaqit_core_logger.dart';
+import 'package:mobile_app_notifications/mobile_app_notifications.dart';
 import 'package:mobile_app_notifications/models/prayers/prayer_name.dart';
 import 'package:mobile_app_notifications/models/prayers/prayer_time_format.dart';
 import 'package:mobile_app_notifications/prayer_services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import 'ring_alarm.dart';
 
 // Module-level scheduling state (previously instance fields on ScheduleAdhan).
 List<String> _newAlarmIds = [];
