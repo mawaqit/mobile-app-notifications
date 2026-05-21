@@ -140,18 +140,20 @@ class AdhanPlayerService : Service() {
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
             .build()
 
-        // Request the audio channel exclusively. If something more important is
-        // active (most commonly a phone call), the request is denied — we then
-        // fall back to a short vibration and leave the heads-up notification
-        // visible. The notification persists (Option X: replaced when the next
-        // prayer fires, since both use the fixed NOTIFICATION_ID).
-        if (!audioFocus.request(attributes)) {
-            Log.w(TAG, "Audio focus denied — vibrating instead, keeping notification visible")
-            vibrateFallback()
-            // Persist the heads-up notification past the vibration window; the
-            // next prayer replaces it via the fixed NOTIFICATION_ID.
-            mainHandler.postDelayed({ stopPlaybackAndPersist() }, 3000L)
-            return
+        // Request the audio channel exclusively. If denied:
+        // - alarm stream: Vivo/OEM may block focus even when no call is active;
+        //   attempt playback anyway since USAGE_ALARM routes through the alarm
+        //   audio path which bypasses ringer restrictions at a lower level.
+        // - any other stream: a real call is holding focus — vibrate and give up.
+        val focusGranted = audioFocus.request(attributes)
+        if (!focusGranted) {
+            if (streamUsage != "alarm") {
+                Log.w(TAG, "Audio focus denied on non-alarm stream — vibrating instead")
+                vibrateFallback()
+                mainHandler.postDelayed({ stopPlaybackAndPersist() }, 3000L)
+                return
+            }
+            Log.w(TAG, "Audio focus denied on alarm stream — attempting playback anyway")
         }
 
         val player = MediaPlayer()
