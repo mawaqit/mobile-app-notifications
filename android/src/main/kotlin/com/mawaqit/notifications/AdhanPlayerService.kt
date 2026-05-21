@@ -20,6 +20,7 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.util.Log
+import android.view.KeyEvent
 import androidx.core.app.NotificationCompat
 
 /**
@@ -134,30 +135,75 @@ class AdhanPlayerService : Service() {
     private fun startPlayback(sound: String, soundType: String, streamUsage: String) {
         releasePlayer()
 
-        val usage = mapUsage(streamUsage)
-        val attributes = AudioAttributes.Builder()
-            .setUsage(usage)
-            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-            .build()
+        // True for any app driving the music stream — covers video players
+        // (MX Player, YouTube, VLC) and audio apps alike. Treat it as
+        // "media is actively playing right now."
+        val mediaActive = audioManager.isMusicActive
 
-        // Request the audio channel exclusively. If denied:
-        // - alarm stream: Vivo/OEM may block focus even when no call is active;
-        //   attempt playback anyway since USAGE_ALARM routes through the alarm
-        //   audio path which bypasses ringer restrictions at a lower level.
-        // - any other stream: a real call is holding focus — vibrate and give up.
-        val focusGranted = audioFocus.request(attributes)
+        // Best-effort: dispatch a global MEDIA_PAUSE so MediaSession-aware
+        // players pause without relying on focus arbitration. Many video
+        // apps ignore audio-focus changes but honor media key events.
+        if (mediaActive) {
+            audioManager.dispatchMediaKeyEvent(
+                KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PAUSE)
+            )
+            audioManager.dispatchMediaKeyEvent(
+                KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PAUSE)
+            )
+        }
+
+        // Decouple focus arbitration from playback routing when media is
+        // active:
+        //   - focusAttributes masquerades as a media app (USAGE_MEDIA +
+        //     CONTENT_TYPE_MUSIC) so other media apps reliably fire their
+        //     OnAudioFocusChange path. Most third-party players only listen
+        //     for media-stream focus loss; a USAGE_ALARM focus request leaves
+        //     them playing.
+        //   - playbackAttributes stays USAGE_ALARM + SONIFICATION so the
+        //     adhan routes through the alarm stream (bypasses ringer/DnD,
+        //     uses the alarm volume slider the user controls for adhan).
+        // When no media is active, request and play with the Dart-resolved
+        // usage (ringtone or alarm per user prefs + ringer mode).
+        val playbackAttributes: AudioAttributes
+        val focusAttributes: AudioAttributes
+        if (mediaActive) {
+            playbackAttributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+            focusAttributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_MEDIA)
+                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                .build()
+        } else {
+            val attrs = AudioAttributes.Builder()
+                .setUsage(mapUsage(streamUsage))
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+            playbackAttributes = attrs
+            focusAttributes = attrs
+        }
+
+        // Fall back to vibrate only when a real call is active
+        // (AudioManager.mode). Any other denial — OEM background policy,
+        // media app refusing to release — proceeds with playback; focus is
+        // cooperative coordination, MediaPlayer doesn't require it to
+        // produce sound.
+        val focusGranted = audioFocus.request(focusAttributes)
         if (!focusGranted) {
-            if (streamUsage != "alarm") {
-                Log.w(TAG, "Audio focus denied on non-alarm stream — vibrating instead")
+            val callActive = audioManager.mode == AudioManager.MODE_IN_CALL ||
+                audioManager.mode == AudioManager.MODE_IN_COMMUNICATION
+            if (callActive) {
+                Log.w(TAG, "Focus denied with call active (mode=${audioManager.mode}) — vibrating instead")
                 vibrateFallback()
                 mainHandler.postDelayed({ stopPlaybackAndPersist() }, 3000L)
                 return
             }
-            Log.w(TAG, "Audio focus denied on alarm stream — attempting playback anyway")
+            Log.w(TAG, "Focus denied (no call, mediaActive=$mediaActive) — playing anyway")
         }
 
         val player = MediaPlayer()
-        player.setAudioAttributes(attributes)
+        player.setAudioAttributes(playbackAttributes)
         player.setOnCompletionListener {
             Log.d(TAG, "Playback completed — notification persists until next prayer or dismiss")
             stopPlaybackAndPersist()
@@ -201,7 +247,9 @@ class AdhanPlayerService : Service() {
             player.prepare()
             player.start()
             mediaPlayer = player
-            Log.d(TAG, "Adhan playback started (usage=$streamUsage, sound=$sound, type=$soundType)")
+            val playbackUsageLog = if (mediaActive) "alarm" else streamUsage
+            val focusUsageLog = if (mediaActive) "media" else streamUsage
+            Log.d(TAG, "Adhan playback started (playback=$playbackUsageLog, focus=$focusUsageLog, requested=$streamUsage, mediaActive=$mediaActive, sound=$sound, type=$soundType)")
         } catch (t: Throwable) {
             Log.e(TAG, "Failed to start playback", t)
             try { player.release() } catch (_: Throwable) {}
