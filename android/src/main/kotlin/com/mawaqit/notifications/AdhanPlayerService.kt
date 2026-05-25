@@ -16,6 +16,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.PowerManager
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -203,6 +204,13 @@ class AdhanPlayerService : Service() {
         }
 
         val player = MediaPlayer()
+        // Hold a partial wake lock for the duration of playback. Without this,
+        // playback triggered from a Doze-mode alarm (e.g. fajr during sleep)
+        // can be deferred — the heads-up notification posts on time but the
+        // audio buffers don't render until the device next wakes for an
+        // unrelated reason. setWakeMode auto-acquires on start() and releases
+        // on stop/pause/release.
+        player.setWakeMode(applicationContext, PowerManager.PARTIAL_WAKE_LOCK)
         player.setAudioAttributes(playbackAttributes)
         player.setOnCompletionListener {
             Log.d(TAG, "Playback completed — notification persists until next prayer or dismiss")
