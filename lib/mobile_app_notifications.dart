@@ -82,27 +82,33 @@ bool _isAlarmStillRelevant(Map<String, dynamic> data) {
 
 @pragma('vm:entry-point')
 void ringAlarm(int id, Map<String, dynamic> data) async {
-  if (!_isAlarmStillRelevant(data)) {
-    Log.w('Skipping stale alarm $id');
-    ScheduleAdhan.instance.schedule();
-    return;
-  }
-
-  String sound = data['sound'];
-  String mosque = data['mosque'];
-  String prayer = data['prayer'];
-  String time = data['time'];
-  SoundType soundType =
-      SoundType.values.firstWhere((e) => e.name == data['sound_type']);
-  bool isPreNotification = data['isPreNotification'];
-  String minutesToAthan = data['minutesToAthan'];
-  int notificationBeforeShuruq = data['notificationBeforeShuruq'];
-  String appLanguage = data['appLanguage'] ?? 'en';
-  bool is24HourFormat = data['is24HourFormat'] ?? true;
-  bool playInSilent = data['playInSilent'] ?? false;
-
-  String notificationTitle;
+  // Payload extraction and dispatch live inside the try so a stale alarm
+  // scheduled by an older build (missing keys, renamed sound_type enum, etc.)
+  // doesn't kill the isolate silently — we'd rather log and drop one cycle
+  // than miss every future prayer. The reschedule lives in `finally` so a
+  // failed cycle still queues tomorrow's alarms.
   try {
+    if (!_isAlarmStillRelevant(data)) {
+      Log.w('Skipping stale alarm $id');
+      return;
+    }
+    String sound = (data['sound'] as String?) ?? 'DEFAULT';
+    String mosque = (data['mosque'] as String?) ?? '';
+    String prayer = (data['prayer'] as String?) ?? '';
+    String time = (data['time'] as String?) ?? '';
+    SoundType soundType = SoundType.values.firstWhere(
+      (e) => e.name == data['sound_type'],
+      orElse: () => SoundType.customSound,
+    );
+    bool isPreNotification = (data['isPreNotification'] as bool?) ?? false;
+    String minutesToAthan = (data['minutesToAthan'] as String?) ?? '';
+    int notificationBeforeShuruq =
+        (data['notificationBeforeShuruq'] as int?) ?? 0;
+    String appLanguage = data['appLanguage'] ?? 'en';
+    bool is24HourFormat = data['is24HourFormat'] ?? true;
+    bool playInSilent = data['playInSilent'] ?? false;
+
+    String notificationTitle;
     if (isPreNotification) {
       notificationTitle = '$time $minutesToAthan $prayer';
     } else if (notificationBeforeShuruq != 0) {
@@ -135,9 +141,12 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       );
     }
 
-    ScheduleAdhan scheduleAdhan = ScheduleAdhan.instance;
-    scheduleAdhan.schedule();
   } catch (e, t) {
     Log.e("Exception ringAlarm", error: e, stackTrace: t);
+  } finally {
+    // Always queue tomorrow's alarms — even if this cycle failed, even on
+    // stale-alarm early return. Missing this call leaves the user stranded
+    // until the next still-queued alarm fires (or app restart).
+    ScheduleAdhan.instance.schedule();
   }
 }
