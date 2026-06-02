@@ -4,6 +4,7 @@ class NotificationInfoModel {
   int notificationBeforeAthan;
   int alarmId;
   bool playInSilent;
+  bool useFullAdhanIOS;
 
   NotificationInfoModel({
     required this.mosqueName,
@@ -14,5 +15,6 @@ class NotificationInfoModel {
     this.alarmId = 0,
     required this.soundType,
     this.playInSilent = false,
+    this.useFullAdhanIOS = false,
   });
 }

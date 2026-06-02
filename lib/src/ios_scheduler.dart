@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tzl;
 import 'package:timezone/timezone.dart' as tz;
 
+import 'full_adhan_ios_channel.dart';
 import 'notification_plugin.dart';
 
 Future<bool> checkIOSNotificationPermissions() async {
@@ -34,14 +35,19 @@ Future<bool> checkIOSNotificationPermissions() async {
 
 Future<void> scheduleIOS() async {
   try {
-    // Clear all scheduled notifications
+    // Clear all scheduled notifications (UN path + native AlarmKit path)
     await flutterLocalNotificationsPlugin.cancelAll();
+    await FullAdhanIOSChannel.cancelAll();
     Log.i('Cleared previous Notifications');
 
     // Retrieve SharedPreferences and prayers list
     SharedPreferences prefs = await SharedPreferences.getInstance();
     var prayersList = await PrayerService().getPrayers();
     int i = 0, j = 0;
+
+    // Payloads for prayers that should be played by the native AlarmKit-based
+    // implementation instead of the UN notification path (full adhan).
+    final List<Map<String, dynamic>> fullAdhanPayloads = [];
 
     if (prayersList.isEmpty) {
       return; // Exit early if there are no prayers
@@ -110,7 +116,21 @@ Future<void> scheduleIOS() async {
 
         if (prayer.sound != 'SILENT' &&
             notificationTime.isAfter(DateTime.now())) {
-          if (prayer.soundType == SoundType.systemSound.name) {
+          // Hand off to native AlarmKit path when enabled — the UN sound is
+          // capped at ~30s, so the full adhan can't play through it.
+          if (prayer.useFullAdhanIOS) {
+            fullAdhanPayloads.add({
+              'alarmId': prayer.alarmId,
+              'fireDateMillis': notificationTime.millisecondsSinceEpoch,
+              'prayerIndex': index,
+              'title': notificationTitle,
+              'body': prayer.mosqueName,
+              'soundAssetId': prayer.sound,
+              'soundType': prayer.soundType,
+            });
+            Log.i(
+                'Full adhan queued for native for ${prayer.prayerName} at: $notificationTime with Id: ${prayer.alarmId}');
+          } else if (prayer.soundType == SoundType.systemSound.name) {
             String? soundFile;
 
             if (prayer.sound?.isNotEmpty == true) {
@@ -125,6 +145,9 @@ Future<void> scheduleIOS() async {
               prayer.mosqueName,
               soundFile ?? prayer.sound,
             );
+            Log.i(
+                'Notification scheduled for ${prayer.prayerName} at: $notificationTime with Id: ${prayer.alarmId}');
+            j++;
           } else {
             await iosNotificationSchedular(
               prayer.alarmId,
@@ -133,16 +156,21 @@ Future<void> scheduleIOS() async {
               prayer.mosqueName,
               prayer.sound,
             );
+            Log.i(
+                'Notification scheduled for ${prayer.prayerName} at: $notificationTime with Id: ${prayer.alarmId}');
+            j++;
           }
-          Log.i(
-              'Notification scheduled for ${prayer.prayerName} at: $notificationTime with Id: ${prayer.alarmId}');
-          j++;
-          // }
         }
 
         // Move to the next prayer
         i++;
       }
+    }
+    // Hand off full-adhan prayers to the native AlarmKit-based scheduler.
+    // Done after the UN loop so a single channel call carries all prayers.
+    if (fullAdhanPayloads.isNotEmpty) {
+      await FullAdhanIOSChannel.schedule(fullAdhanPayloads);
+      Log.i('Full adhan handoff: ${fullAdhanPayloads.length} prayer(s)');
     }
   } catch (e, s) {
     Log.e('Error in scheduleIOS: $e', error: e, stackTrace: s);

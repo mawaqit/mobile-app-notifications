@@ -21,6 +21,12 @@ class PrayerNotification {
   /// notification. Defaults to true.
   final bool playInSilent;
 
+  /// iOS-only: when true, the main athan is handed off to a native AlarmKit
+  /// implementation that plays the full adhan recording. When false, the
+  /// standard UN notification path runs and iOS caps the sound at ~30s.
+  /// Pre-notifications stay on the UN path regardless.
+  final bool useFullAdhanIOS;
+
   static getDBPrayerKeyByPrayer(int? prayer) {
     switch (prayer) {
       case 0:
@@ -65,6 +71,7 @@ class PrayerNotification {
     this.notificationSound,
     this.soundType, {
     this.playInSilent = false,
+    this.useFullAdhanIOS = false,
   });
 
   PrayerNotification.fromJson(Map<String, dynamic> json)
@@ -76,7 +83,8 @@ class PrayerNotification {
             (e) => e.name == json['soundType'],
             orElse: () => SoundType.none),
         // Default off — users opt in to "play through silent mode" explicitly.
-        playInSilent = json['playInSilent'] ?? false;
+        playInSilent = json['playInSilent'] ?? false,
+        useFullAdhanIOS = json['useFullAdhanIOS'] ?? false;
 
   Map<String, dynamic> toJson() {
     return {
@@ -86,6 +94,7 @@ class PrayerNotification {
       'notificationSound': notificationSound,
       'soundType': soundType.name,
       'playInSilent': playInSilent,
+      'useFullAdhanIOS': useFullAdhanIOS,
     };
   }
 }
