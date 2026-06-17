@@ -47,6 +47,11 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.mawaqit.notifications
+        pluginClass: MobileAppNotificationsPlugin
 
   # To add assets to your package, add an assets section, like this:
   # assets:

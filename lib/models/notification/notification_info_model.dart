@@ -1,8 +1,9 @@
 class NotificationInfoModel {
-  String? mosqueName, sound, prayerName , soundType;
+  String? mosqueName, sound, prayerName, soundType;
   DateTime? time;
   int notificationBeforeAthan;
   int alarmId;
+  bool playInSilent;
 
   NotificationInfoModel({
     required this.mosqueName,
@@ -12,5 +13,6 @@ class NotificationInfoModel {
     this.notificationBeforeAthan = 0,
     this.alarmId = 0,
     required this.soundType,
+    this.playInSilent = false,
   });
 }
