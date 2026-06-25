@@ -4,7 +4,8 @@ class NotificationInfoModel {
   int notificationBeforeAthan;
   int alarmId;
   bool playInSilent;
-
+  bool customVolumeEnabled;
+  int adhanVolume;
   NotificationInfoModel({
     required this.mosqueName,
     required this.sound,
@@ -14,5 +15,7 @@ class NotificationInfoModel {
     this.alarmId = 0,
     required this.soundType,
     this.playInSilent = false,
+    this.customVolumeEnabled = false,
+    this.adhanVolume = 100,
   });
 }

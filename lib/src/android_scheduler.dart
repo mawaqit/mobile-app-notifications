@@ -239,6 +239,8 @@ Future<void> scheduleAndroid() async {
                 'scheduledAtMillis': notificationTime.millisecondsSinceEpoch,
                 'prayerAtMillis': prayer.time!.millisecondsSinceEpoch,
                 'playInSilent': prayer.playInSilent,
+                'customVolumeEnabled': prayer.customVolumeEnabled,
+                'adhanVolume': prayer.adhanVolume,
               });
           Log.i(
               'Sound ${prayer.sound} Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');

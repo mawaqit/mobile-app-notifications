@@ -38,6 +38,37 @@ class ScheduleAdhan {
       await ios.scheduleIOS();
     }
   }
+
+  /// In-app settings preview (Android). Plays the adhan through the same native
+  /// path as a real notification — same stream resolution, volume override and
+  /// restore — but without the persistent foreground notification. The caller is
+  /// responsible for calling [stopAdhanPreview] on sheet-close / app-background.
+  Future<void> previewAdhan({
+    required String sound,
+    required String soundType,
+    required bool playInSilent,
+    required int adhanVolume,
+    String title = '',
+    String body = '',
+  }) =>
+      previewAdhanNative(
+        sound: sound,
+        soundType: SoundType.values.firstWhere(
+          (e) => e.name == soundType,
+          orElse: () => SoundType.customSound,
+        ),
+        playInSilent: playInSilent,
+        adhanVolume: adhanVolume,
+        title: title,
+        body: body,
+      );
+
+  /// Live-adjusts the preview volume on the active stream (no restart).
+  Future<void> updatePreviewVolume(int adhanVolume) =>
+      updatePreviewVolumeNative(adhanVolume);
+
+  /// Stops the preview (or any native playback) and restores the device volume.
+  Future<void> stopAdhanPreview() => stopAdhanNative();
 }
 
 // ---------------------------------------------------------------------------
@@ -107,6 +138,8 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
     String appLanguage = data['appLanguage'] ?? 'en';
     bool is24HourFormat = data['is24HourFormat'] ?? true;
     bool playInSilent = data['playInSilent'] ?? false;
+    bool customVolumeEnabled = data['customVolumeEnabled'] ?? false;
+    int adhanVolume = data['adhanVolume'] ?? 100;
 
     String notificationTitle;
     if (isPreNotification) {
@@ -138,6 +171,8 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
         title: notificationTitle,
         body: mosque,
         playInSilent: playInSilent,
+        customVolumeEnabled: customVolumeEnabled,
+        adhanVolume: adhanVolume,
       );
     }
 

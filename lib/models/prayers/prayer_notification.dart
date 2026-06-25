@@ -8,6 +8,12 @@ enum SoundType {
   systemSound,
 }
 
+/// Per-prayer adhan volume bounds. The floor is enforced so the adhan can
+/// never be fully muted via the in-app slider (a muted adhan is almost always
+/// a mistake — users have play-in-silent / SILENT sound for that).
+const int kMinAdhanVolume = 10;
+const int kMaxAdhanVolume = 100;
+
 class PrayerNotification {
   final int? prayer;
   final String? mosqueUuid;
@@ -20,6 +26,19 @@ class PrayerNotification {
   /// adhan plays on the ringtone stream and respects muting like a normal
   /// notification. Defaults to true.
   final bool playInSilent;
+
+  /// Android-only: when true, the adhan playback temporarily overrides the
+  /// system volume of the stream it plays on (ring/alarm) with [adhanVolume],
+  /// restoring the original level once playback finishes. When false, the adhan
+  /// plays at whatever the device volume already is. Defaults to false.
+  final bool customVolumeEnabled;
+
+  /// Android-only: per-prayer adhan volume as a percentage in
+  /// [kMinAdhanVolume]..[kMaxAdhanVolume]. Only applied when
+  /// [customVolumeEnabled] is true. Defaults to [kMaxAdhanVolume].
+  final int adhanVolume;
+
+
 
   static getDBPrayerKeyByPrayer(int? prayer) {
     switch (prayer) {
@@ -65,6 +84,8 @@ class PrayerNotification {
     this.notificationSound,
     this.soundType, {
     this.playInSilent = false,
+    this.customVolumeEnabled = false,
+    this.adhanVolume = kMaxAdhanVolume,
   });
 
   PrayerNotification.fromJson(Map<String, dynamic> json)
@@ -76,7 +97,9 @@ class PrayerNotification {
             (e) => e.name == json['soundType'],
             orElse: () => SoundType.none),
         // Default off — users opt in to "play through silent mode" explicitly.
-        playInSilent = json['playInSilent'] ?? false;
+        playInSilent = json['playInSilent'] ?? false,
+        customVolumeEnabled = json['customVolumeEnabled'] ?? false,
+        adhanVolume = json['adhanVolume'] ?? kMaxAdhanVolume;
 
   Map<String, dynamic> toJson() {
     return {
@@ -86,6 +109,8 @@ class PrayerNotification {
       'notificationSound': notificationSound,
       'soundType': soundType.name,
       'playInSilent': playInSilent,
+      'customVolumeEnabled': customVolumeEnabled,
+      'adhanVolume': adhanVolume,
     };
   }
 }
