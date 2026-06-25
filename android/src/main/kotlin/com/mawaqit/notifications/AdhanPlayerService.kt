@@ -87,6 +87,18 @@ class AdhanPlayerService : Service() {
         getSystemService(Context.AUDIO_SERVICE) as AudioManager
     }
 
+    private val powerManager: PowerManager by lazy {
+        getSystemService(Context.POWER_SERVICE) as PowerManager
+    }
+
+    // Held for the whole onStartCommand → playback span so the CPU can't suspend
+    // mid-setup in Doze. The alarm's wake-from-idle window is short; MediaPlayer
+    // .setWakeMode alone is insufficient because its internal lock only engages
+    // at start(), but the CPU can suspend BEFORE start() is even reached — which
+    // is why the notification posts on time yet audio doesn't render until the
+    // next device wake. Acquiring our own lock first closes that gap.
+    private var wakeLock: PowerManager.WakeLock? = null
+
     // Focus-loss is most often a phone call interrupting the adhan; we stop
     // playback but keep the notification visible so the user can still see
     // which prayer fired once the call ends.
@@ -128,6 +140,12 @@ class AdhanPlayerService : Service() {
                 return START_NOT_STICKY
             }
             ACTION_PLAY, null -> {
+                // Keep the CPU awake through setup AND playback so a Doze-fired
+                // alarm renders audio immediately rather than when the device next
+                // wakes. Acquired here, before anything else, to close the gap
+                // ahead of MediaPlayer.start().
+                acquireWakeLock()
+
                 // Self-heal: restore any override left behind by a previous
                 // playback whose process was killed before it could restore (and
                 // reset before this new play captures a fresh original). Idempotent
@@ -180,9 +198,10 @@ class AdhanPlayerService : Service() {
     override fun onDestroy() {
         releasePlayer()
         // Final safety net — guarantees the device volume is never left at the
-        // adhan override level if the service is torn down by any path that
-        // didn't already restore.
+        // adhan override level, and the wake lock never leaks, if the service is
+        // torn down by any path that didn't already clean up.
         restoreVolumeIfNeeded()
+        releaseWakeLock()
         super.onDestroy()
     }
 
@@ -265,12 +284,11 @@ class AdhanPlayerService : Service() {
         }
 
         val player = MediaPlayer()
-        // Hold a partial wake lock for the duration of playback. Without this,
-        // playback triggered from a Doze-mode alarm (e.g. fajr during sleep)
-        // can be deferred — the heads-up notification posts on time but the
-        // audio buffers don't render until the device next wakes for an
-        // unrelated reason. setWakeMode auto-acquires on start() and releases
-        // on stop/pause/release.
+        // Secondary wake lock for the playback itself. The PRIMARY guard is the
+        // service-held wake lock acquired at the top of onStartCommand — that is
+        // what keeps the CPU awake through setup so start() is reached at all in
+        // Doze. setWakeMode only engages at start() (too late to bridge the gap),
+        // but is kept here as defence in depth for the playback span.
         player.setWakeMode(applicationContext, PowerManager.PARTIAL_WAKE_LOCK)
         player.setAudioAttributes(playbackAttributes)
         player.setOnCompletionListener {
@@ -425,6 +443,34 @@ class AdhanPlayerService : Service() {
         }
     }
 
+    /**
+     * Acquire a partial wake lock with a generous safety timeout (far longer
+     * than any adhan) so a missed release can never leak it. Reference counting
+     * is off so repeated acquires are idempotent.
+     */
+    private fun acquireWakeLock() {
+        if (wakeLock?.isHeld == true) return
+        try {
+            wakeLock = powerManager.newWakeLock(
+                PowerManager.PARTIAL_WAKE_LOCK,
+                "mawaqit:adhan_playback",
+            ).apply {
+                setReferenceCounted(false)
+                acquire(10 * 60 * 1000L) // 10-min hard cap; adhan is far shorter
+            }
+            Log.d(TAG, "Wake lock acquired")
+        } catch (t: Throwable) {
+            Log.w(TAG, "Failed to acquire wake lock", t)
+        }
+    }
+
+    private fun releaseWakeLock() {
+        try {
+            wakeLock?.let { if (it.isHeld) it.release() }
+        } catch (_: Throwable) {}
+        wakeLock = null
+    }
+
     private fun releasePlayer() {
         mediaPlayer?.let { mp ->
             try {
@@ -443,6 +489,7 @@ class AdhanPlayerService : Service() {
         mainHandler.removeCallbacksAndMessages(null)
         releasePlayer()
         restoreVolumeIfNeeded()
+        releaseWakeLock()
         audioFocus.abandon()
         cancelVibration()
         // Cancel the notification explicitly — covers the case where the service
@@ -468,6 +515,7 @@ class AdhanPlayerService : Service() {
         mainHandler.removeCallbacksAndMessages(null)
         releasePlayer()
         restoreVolumeIfNeeded()
+        releaseWakeLock()
         audioFocus.abandon()
         cancelVibration()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
