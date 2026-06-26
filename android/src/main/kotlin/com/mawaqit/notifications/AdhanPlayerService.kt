@@ -180,6 +180,9 @@ class AdhanPlayerService : Service() {
                     // Nothing to play (muted) and no notification to show — just stop.
                     stopPlaybackAndSelf()
                 } else {
+                    if (audioManager.ringerMode == AudioManager.RINGER_MODE_VIBRATE) {
+                        vibrateNotification()
+                    }
                     Log.i(TAG, "Stream '$streamUsage' is silenced — visual notification only")
                     mainHandler.postDelayed({ stopPlaybackAndPersist() }, 3000L)
                 }
@@ -466,6 +469,28 @@ class AdhanPlayerService : Service() {
         } else {
             @Suppress("DEPRECATION")
             v.vibrate(pattern, -1)
+        }
+    }
+
+    /**
+     * Short notification-style buzz for the "silenced adhan in vibrate mode"
+     * case (play-in-silent off + ringer in vibrate). Tagged USAGE_NOTIFICATION
+     * — unlike [vibrateFallback]'s USAGE_ALARM — so Do Not Disturb policy can
+     * suppress it: this is the "respect the user's silencing" path, not an alarm.
+     */
+    private fun vibrateNotification() {
+        val v = vibrator?.takeIf { it.hasVibrator() } ?: return
+        // Single gentle pulse — a notification-like tap, not an alarm pattern.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val effect = VibrationEffect.createOneShot(400, VibrationEffect.DEFAULT_AMPLITUDE)
+            val attrs = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+            v.vibrate(effect, attrs)
+        } else {
+            @Suppress("DEPRECATION")
+            v.vibrate(400)
         }
     }
 
