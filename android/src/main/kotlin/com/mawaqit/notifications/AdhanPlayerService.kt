@@ -59,16 +59,6 @@ class AdhanPlayerService : Service() {
         const val EXTRA_TITLE = "title"
         const val EXTRA_BODY = "body"
 
-        // Floor so the in-app slider can never fully mute the adhan.
-        private const val MIN_VOLUME_PERCENT = 10
-        private const val MAX_VOLUME_PERCENT = 100
-
-        // Pending-restore sentinel: written before we override the system stream
-        // volume so a process death mid-adhan can be healed on the next start.
-        private const val PREFS_NAME = "mawaqit_adhan_player"
-        private const val KEY_RESTORE_STREAM = "pending_restore_stream"
-        private const val KEY_RESTORE_VOLUME = "pending_restore_volume"
-
         // i18n strings — Flutter is the source of truth for translation; native
         // strings here are defensive English fallbacks only.
         const val EXTRA_CHANNEL_NAME = "channelName"
@@ -79,9 +69,10 @@ class AdhanPlayerService : Service() {
 
     private var mediaPlayer: MediaPlayer? = null
 
-    // The stream whose volume the current playback overrode, so the preview can
-    // live-adjust it (ACTION_SET_PREVIEW_VOLUME) without restarting playback.
-    private var activeOverrideStream: Int? = null
+    // Temporarily overrides a stream's volume for the per-prayer adhan level and
+    // restores it afterwards, with process-death self-heal. All the override
+    // state + sentinel persistence lives in this helper.
+    private val volumeOverride: StreamVolumeOverride by lazy { StreamVolumeOverride(this) }
 
     private val audioManager: AudioManager by lazy {
         getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -135,8 +126,9 @@ class AdhanPlayerService : Service() {
                 // Live slider adjustment during a preview — re-apply the level to
                 // the stream the current playback already overrode. Must NOT run
                 // the restore self-heal, or it would undo the active override.
-                val volumePercent = intent.getIntExtra(EXTRA_VOLUME, MAX_VOLUME_PERCENT)
-                setActiveStreamVolume(volumePercent)
+                val volumePercent =
+                    intent.getIntExtra(EXTRA_VOLUME, StreamVolumeOverride.MAX_VOLUME_PERCENT)
+                volumeOverride.setLevel(volumePercent)
                 return START_NOT_STICKY
             }
             ACTION_PLAY, null -> {
@@ -150,13 +142,14 @@ class AdhanPlayerService : Service() {
                 // playback whose process was killed before it could restore (and
                 // reset before this new play captures a fresh original). Idempotent
                 // no-op when there's nothing pending.
-                restoreVolumeIfNeeded()
+                volumeOverride.restore()
 
                 val sound = intent?.getStringExtra(EXTRA_SOUND).orEmpty()
                 val soundType = intent?.getStringExtra(EXTRA_SOUND_TYPE) ?: "customSound"
                 val streamUsage = intent?.getStringExtra(EXTRA_STREAM_USAGE) ?: "alarm"
                 val volumeEnabled = intent?.getBooleanExtra(EXTRA_VOLUME_ENABLED, false) ?: false
-                val volumePercent = intent?.getIntExtra(EXTRA_VOLUME, MAX_VOLUME_PERCENT) ?: MAX_VOLUME_PERCENT
+                val volumePercent = intent?.getIntExtra(EXTRA_VOLUME, StreamVolumeOverride.MAX_VOLUME_PERCENT)
+                    ?: StreamVolumeOverride.MAX_VOLUME_PERCENT
                 val previewMode = intent?.getBooleanExtra(EXTRA_PREVIEW_MODE, false) ?: false
                 val title = intent?.getStringExtra(EXTRA_TITLE).orEmpty()
                 val body = intent?.getStringExtra(EXTRA_BODY).orEmpty()
@@ -200,7 +193,7 @@ class AdhanPlayerService : Service() {
         // Final safety net — guarantees the device volume is never left at the
         // adhan override level, and the wake lock never leaks, if the service is
         // torn down by any path that didn't already clean up.
-        restoreVolumeIfNeeded()
+        volumeOverride.restore()
         releaseWakeLock()
         super.onDestroy()
     }
@@ -340,7 +333,7 @@ class AdhanPlayerService : Service() {
             if (volumeEnabled) {
                 val effectiveUsage =
                     if (mediaActive) AudioAttributes.USAGE_ALARM else mapUsage(streamUsage)
-                applyVolumeOverride(streamForUsage(effectiveUsage), volumePercent)
+                volumeOverride.apply(streamForUsage(effectiveUsage), volumePercent)
             }
             player.start()
             mediaPlayer = player
@@ -375,72 +368,6 @@ class AdhanPlayerService : Service() {
         AudioAttributes.USAGE_NOTIFICATION          -> AudioManager.STREAM_NOTIFICATION
         AudioAttributes.USAGE_MEDIA                 -> AudioManager.STREAM_MUSIC
         else                                        -> AudioManager.STREAM_ALARM
-    }
-
-    /**
-     * Temporarily set [stream]'s volume to [volumePercent] (floored at
-     * MIN_VOLUME_PERCENT). The pre-override level is saved to a persistent
-     * sentinel BEFORE the change so it survives process death; the sentinel is
-     * only written once per override cycle so back-to-back prayers don't capture
-     * an already-overridden value as the "original" to restore to.
-     */
-    private fun applyVolumeOverride(stream: Int, volumePercent: Int) {
-        try {
-            val max = audioManager.getStreamMaxVolume(stream)
-            if (max <= 0) return
-            val pct = volumePercent.coerceIn(MIN_VOLUME_PERCENT, MAX_VOLUME_PERCENT)
-            val target = Math.round(pct / 100f * max).coerceIn(1, max)
-            val original = audioManager.getStreamVolume(stream)
-
-            val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            if (!prefs.contains(KEY_RESTORE_STREAM)) {
-                prefs.edit()
-                    .putInt(KEY_RESTORE_STREAM, stream)
-                    .putInt(KEY_RESTORE_VOLUME, original)
-                    .apply()
-            }
-            audioManager.setStreamVolume(stream, target, 0) // flag 0 = no volume UI
-            activeOverrideStream = stream
-            Log.d(TAG, "Volume override: stream=$stream original=$original target=$target pct=$pct")
-        } catch (t: Throwable) {
-            Log.w(TAG, "Failed to apply volume override", t)
-        }
-    }
-
-    /**
-     * Re-apply [volumePercent] to the stream the current playback already
-     * overrode, without touching the saved original (so restore still returns to
-     * the pre-preview level). Used for live slider adjustment during a preview.
-     */
-    private fun setActiveStreamVolume(volumePercent: Int) {
-        val stream = activeOverrideStream ?: return
-        try {
-            val max = audioManager.getStreamMaxVolume(stream)
-            if (max <= 0) return
-            val pct = volumePercent.coerceIn(MIN_VOLUME_PERCENT, MAX_VOLUME_PERCENT)
-            val target = Math.round(pct / 100f * max).coerceIn(1, max)
-            audioManager.setStreamVolume(stream, target, 0)
-        } catch (t: Throwable) {
-            Log.w(TAG, "Failed to set active stream volume", t)
-        }
-    }
-
-    /** Restore the system stream volume saved by [applyVolumeOverride], if any. */
-    private fun restoreVolumeIfNeeded() {
-        activeOverrideStream = null
-        try {
-            val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            if (!prefs.contains(KEY_RESTORE_STREAM)) return
-            val stream = prefs.getInt(KEY_RESTORE_STREAM, -1)
-            val original = prefs.getInt(KEY_RESTORE_VOLUME, -1)
-            prefs.edit().remove(KEY_RESTORE_STREAM).remove(KEY_RESTORE_VOLUME).apply()
-            if (stream >= 0 && original >= 0) {
-                audioManager.setStreamVolume(stream, original, 0)
-                Log.d(TAG, "Volume restored: stream=$stream original=$original")
-            }
-        } catch (t: Throwable) {
-            Log.w(TAG, "Failed to restore volume", t)
-        }
     }
 
     /**
@@ -488,7 +415,7 @@ class AdhanPlayerService : Service() {
     private fun stopPlaybackAndSelf() {
         mainHandler.removeCallbacksAndMessages(null)
         releasePlayer()
-        restoreVolumeIfNeeded()
+        volumeOverride.restore()
         releaseWakeLock()
         audioFocus.abandon()
         cancelVibration()
@@ -514,7 +441,7 @@ class AdhanPlayerService : Service() {
     private fun stopPlaybackAndPersist() {
         mainHandler.removeCallbacksAndMessages(null)
         releasePlayer()
-        restoreVolumeIfNeeded()
+        volumeOverride.restore()
         releaseWakeLock()
         audioFocus.abandon()
         cancelVibration()

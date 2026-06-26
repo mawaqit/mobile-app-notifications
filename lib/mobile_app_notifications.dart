@@ -24,8 +24,6 @@ class ScheduleAdhan {
 
   Future<void> initAlarmManager() => android.initAlarmManager();
 
-  Future<void> migrateOldAlarmIds() => android.migrateOldAlarmIds();
-
   Future<bool> checkIOSNotificationPermissions() =>
       ios.checkIOSNotificationPermissions();
 

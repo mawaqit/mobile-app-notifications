@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:mawaqit_core_logger/mawaqit_core_logger.dart';
@@ -22,51 +20,12 @@ void _flushAlarmIdList() {
   _newAlarmIds = [];
 }
 
-/// Migration: Clear all old alarms on first launch after update
-/// This prevents orphan alarms from old ID format
-Future<void> migrateOldAlarmIds() async {
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-  bool migrated = prefs.getBool('alarms_migrated_v2') ?? false;
-
-  if (!migrated && Platform.isAndroid) {
-    Log.i('Migrating alarms from old version...');
-
-    // Cancel all tracked alarms
-    List<String> oldAlarms = prefs.getStringList('alarmIds') ?? [];
-    for (String id in oldAlarms) {
-      await AndroidAlarmManager.cancel(int.parse(id));
-    }
-
-    // Brute-force cancel every ID that could have been produced by the old
-    // ID format (`int.parse("$index$day$month")` with index 0–6, day 1–31,
-    // month 1–12). There's no record of which IDs were actually scheduled by
-    // the previous version, so we sweep the entire possible space — ~2600
-    // cancel calls — once, then never run again (gated by alarms_migrated_v2).
-    for (int index = 0; index < 7; index++) {
-      for (int day = 1; day <= 31; day++) {
-        for (int month = 1; month <= 12; month++) {
-          int oldMainId = int.parse('$index$day$month');
-          int oldPreId = int.parse('1$oldMainId'); // pre-notif prefix "1"
-          await AndroidAlarmManager.cancel(oldMainId);
-          await AndroidAlarmManager.cancel(oldPreId);
-        }
-      }
-    }
-
-    // Clear the list
-    await prefs.remove('alarmIds');
-
-    // Mark as migrated
-    await prefs.setBool('alarms_migrated_v2', true);
-
-    Log.t('Migration complete. Rescheduling with new IDs...');
-
-    // Reschedule with new IDs
-    await scheduleAndroid();
-  }
-}
-
-/// Clear all alarms and reschedule - used for 500 error recovery
+/// Clear all alarms and reschedule - used for 500 error recovery.
+///
+/// Cancels every alarm we have a record of, clears tracking, and reschedules
+/// from a clean state. This is near-unreachable in practice — scheduling caps
+/// at ~10 alarms per cycle with deterministic IDs that replace rather than
+/// accumulate — but kept as cheap insurance behind the 500 catch.
 Future<void> _clearAllAndReschedule() async {
   Log.w('500 alarm limit hit - clearing all and rescheduling...');
 
@@ -79,17 +38,6 @@ Future<void> _clearAllAndReschedule() async {
       await AndroidAlarmManager.cancel(int.parse(id));
     } catch (e) {
       // Ignore cancel errors
-    }
-  }
-
-  // Brute-force sweep ~10,000 alarm IDs across the lower half of the ID space
-  // (i = 0..999_990 step 10_000, j = 0..99 → IDs 0, 1, … 99, 10_000, 10_001 …).
-  // Recovery path only — Android caps scheduled alarms at 500 per app and the
-  // tracked `alarmIds` list may have drifted; this catches anything not tracked
-  // so we can reschedule from a clean state.
-  for (int i = 0; i < 1000000; i += 10000) {
-    for (int j = 0; j < 100; j++) {
-      await AndroidAlarmManager.cancel(i + j);
     }
   }
 
