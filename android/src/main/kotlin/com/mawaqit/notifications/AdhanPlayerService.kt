@@ -42,10 +42,20 @@ class AdhanPlayerService : Service() {
 
         const val ACTION_PLAY = "com.mawaqit.notifications.ACTION_PLAY"
         const val ACTION_STOP = "com.mawaqit.notifications.ACTION_STOP"
+        // Live-adjust the override level on the currently-playing preview stream
+        // without restarting playback (driven by the in-app volume slider).
+        const val ACTION_SET_PREVIEW_VOLUME = "com.mawaqit.notifications.ACTION_SET_PREVIEW_VOLUME"
 
         const val EXTRA_SOUND = "sound"            // raw resource name OR file path / URI
         const val EXTRA_SOUND_TYPE = "soundType"   // "customSound" | "systemSound"
         const val EXTRA_STREAM_USAGE = "streamUsage" // "alarm" | "ringtone" | "notification" | "media"
+        const val EXTRA_VOLUME_ENABLED = "customVolumeEnabled" // per-prayer volume override on/off
+        const val EXTRA_VOLUME = "adhanVolume"      // 0..100 percent, applied when enabled
+        // When true, this playback is the in-app settings preview: it skips the
+        // foreground notification (so it doesn't persist) but uses the exact same
+        // stream resolution + volume override + restore as a real adhan. The host
+        // stops it on sheet-close / app-background.
+        const val EXTRA_PREVIEW_MODE = "previewMode"
         const val EXTRA_TITLE = "title"
         const val EXTRA_BODY = "body"
 
@@ -59,9 +69,26 @@ class AdhanPlayerService : Service() {
 
     private var mediaPlayer: MediaPlayer? = null
 
+    // Temporarily overrides a stream's volume for the per-prayer adhan level and
+    // restores it afterwards, with process-death self-heal. All the override
+    // state + sentinel persistence lives in this helper.
+    private val volumeOverride: StreamVolumeOverride by lazy { StreamVolumeOverride(this) }
+
     private val audioManager: AudioManager by lazy {
         getSystemService(Context.AUDIO_SERVICE) as AudioManager
     }
+
+    private val powerManager: PowerManager by lazy {
+        getSystemService(Context.POWER_SERVICE) as PowerManager
+    }
+
+    // Held for the whole onStartCommand → playback span so the CPU can't suspend
+    // mid-setup in Doze. The alarm's wake-from-idle window is short; MediaPlayer
+    // .setWakeMode alone is insufficient because its internal lock only engages
+    // at start(), but the CPU can suspend BEFORE start() is even reached — which
+    // is why the notification posts on time yet audio doesn't render until the
+    // next device wake. Acquiring our own lock first closes that gap.
+    private var wakeLock: PowerManager.WakeLock? = null
 
     // Focus-loss is most often a phone call interrupting the adhan; we stop
     // playback but keep the notification visible so the user can still see
@@ -95,10 +122,35 @@ class AdhanPlayerService : Service() {
                 stopPlaybackAndSelf()
                 return START_NOT_STICKY
             }
+            ACTION_SET_PREVIEW_VOLUME -> {
+                // Live slider adjustment during a preview — re-apply the level to
+                // the stream the current playback already overrode. Must NOT run
+                // the restore self-heal, or it would undo the active override.
+                val volumePercent =
+                    intent.getIntExtra(EXTRA_VOLUME, StreamVolumeOverride.MAX_VOLUME_PERCENT)
+                volumeOverride.setLevel(volumePercent)
+                return START_NOT_STICKY
+            }
             ACTION_PLAY, null -> {
+                // Keep the CPU awake through setup AND playback so a Doze-fired
+                // alarm renders audio immediately rather than when the device next
+                // wakes. Acquired here, before anything else, to close the gap
+                // ahead of MediaPlayer.start().
+                acquireWakeLock()
+
+                // Self-heal: restore any override left behind by a previous
+                // playback whose process was killed before it could restore (and
+                // reset before this new play captures a fresh original). Idempotent
+                // no-op when there's nothing pending.
+                volumeOverride.restore()
+
                 val sound = intent?.getStringExtra(EXTRA_SOUND).orEmpty()
                 val soundType = intent?.getStringExtra(EXTRA_SOUND_TYPE) ?: "customSound"
                 val streamUsage = intent?.getStringExtra(EXTRA_STREAM_USAGE) ?: "alarm"
+                val volumeEnabled = intent?.getBooleanExtra(EXTRA_VOLUME_ENABLED, false) ?: false
+                val volumePercent = intent?.getIntExtra(EXTRA_VOLUME, StreamVolumeOverride.MAX_VOLUME_PERCENT)
+                    ?: StreamVolumeOverride.MAX_VOLUME_PERCENT
+                val previewMode = intent?.getBooleanExtra(EXTRA_PREVIEW_MODE, false) ?: false
                 val title = intent?.getStringExtra(EXTRA_TITLE).orEmpty()
                 val body = intent?.getStringExtra(EXTRA_BODY).orEmpty()
                 val channelName = intent?.getStringExtra(EXTRA_CHANNEL_NAME) ?: "Adhan playback"
@@ -111,13 +163,26 @@ class AdhanPlayerService : Service() {
                 // skip MediaPlayer entirely and omit the Stop action — there's
                 // nothing to stop. The heads-up notification still appears.
                 val audible = isStreamAudible(streamUsage)
-                startAsForeground(
-                    title, body, channelName, channelDescription, stopLabel, defaultTitle,
-                    includeStopAction = audible,
-                )
+
+                // Preview mode skips the foreground notification entirely — it's a
+                // transient, in-app, lifecycle-bound preview rather than a real
+                // adhan that must persist in the tray.
+                if (!previewMode) {
+                    startAsForeground(
+                        title, body, channelName, channelDescription, stopLabel, defaultTitle,
+                        includeStopAction = audible,
+                    )
+                }
+
                 if (audible) {
-                    startPlayback(sound, soundType, streamUsage)
+                    startPlayback(sound, soundType, streamUsage, volumeEnabled, volumePercent)
+                } else if (previewMode) {
+                    // Nothing to play (muted) and no notification to show — just stop.
+                    stopPlaybackAndSelf()
                 } else {
+                    if (audioManager.ringerMode == AudioManager.RINGER_MODE_VIBRATE) {
+                        vibrateNotification()
+                    }
                     Log.i(TAG, "Stream '$streamUsage' is silenced — visual notification only")
                     mainHandler.postDelayed({ stopPlaybackAndPersist() }, 3000L)
                 }
@@ -128,12 +193,23 @@ class AdhanPlayerService : Service() {
 
     override fun onDestroy() {
         releasePlayer()
+        // Final safety net — guarantees the device volume is never left at the
+        // adhan override level, and the wake lock never leaks, if the service is
+        // torn down by any path that didn't already clean up.
+        volumeOverride.restore()
+        releaseWakeLock()
         super.onDestroy()
     }
 
     // region playback
 
-    private fun startPlayback(sound: String, soundType: String, streamUsage: String) {
+    private fun startPlayback(
+        sound: String,
+        soundType: String,
+        streamUsage: String,
+        volumeEnabled: Boolean,
+        volumePercent: Int,
+    ) {
         releasePlayer()
 
         // True for any app driving the music stream — covers video players
@@ -204,12 +280,11 @@ class AdhanPlayerService : Service() {
         }
 
         val player = MediaPlayer()
-        // Hold a partial wake lock for the duration of playback. Without this,
-        // playback triggered from a Doze-mode alarm (e.g. fajr during sleep)
-        // can be deferred — the heads-up notification posts on time but the
-        // audio buffers don't render until the device next wakes for an
-        // unrelated reason. setWakeMode auto-acquires on start() and releases
-        // on stop/pause/release.
+        // Secondary wake lock for the playback itself. The PRIMARY guard is the
+        // service-held wake lock acquired at the top of onStartCommand — that is
+        // what keeps the CPU awake through setup so start() is reached at all in
+        // Doze. setWakeMode only engages at start() (too late to bridge the gap),
+        // but is kept here as defence in depth for the playback span.
         player.setWakeMode(applicationContext, PowerManager.PARTIAL_WAKE_LOCK)
         player.setAudioAttributes(playbackAttributes)
         player.setOnCompletionListener {
@@ -253,6 +328,16 @@ class AdhanPlayerService : Service() {
                 }
             }
             player.prepare()
+            // Apply the per-prayer volume override just before start(), targeting
+            // the stream the player ACTUALLY routes to. When media is active the
+            // playback attributes are forced to USAGE_ALARM (see above), so the
+            // override must hit STREAM_ALARM regardless of the requested usage —
+            // otherwise we'd change the wrong stream's volume.
+            if (volumeEnabled) {
+                val effectiveUsage =
+                    if (mediaActive) AudioAttributes.USAGE_ALARM else mapUsage(streamUsage)
+                volumeOverride.apply(streamForUsage(effectiveUsage), volumePercent)
+            }
             player.start()
             mediaPlayer = player
             val playbackUsageLog = if (mediaActive) "alarm" else streamUsage
@@ -279,6 +364,43 @@ class AdhanPlayerService : Service() {
         else           -> AudioAttributes.USAGE_ALARM
     }
 
+    /** The AudioManager stream that a given playback usage routes its volume to. */
+    private fun streamForUsage(usage: Int): Int = when (usage) {
+        AudioAttributes.USAGE_ALARM                 -> AudioManager.STREAM_ALARM
+        AudioAttributes.USAGE_NOTIFICATION_RINGTONE -> AudioManager.STREAM_RING
+        AudioAttributes.USAGE_NOTIFICATION          -> AudioManager.STREAM_NOTIFICATION
+        AudioAttributes.USAGE_MEDIA                 -> AudioManager.STREAM_MUSIC
+        else                                        -> AudioManager.STREAM_ALARM
+    }
+
+    /**
+     * Acquire a partial wake lock with a generous safety timeout (far longer
+     * than any adhan) so a missed release can never leak it. Reference counting
+     * is off so repeated acquires are idempotent.
+     */
+    private fun acquireWakeLock() {
+        if (wakeLock?.isHeld == true) return
+        try {
+            wakeLock = powerManager.newWakeLock(
+                PowerManager.PARTIAL_WAKE_LOCK,
+                "mawaqit:adhan_playback",
+            ).apply {
+                setReferenceCounted(false)
+                acquire(10 * 60 * 1000L) // 10-min hard cap; adhan is far shorter
+            }
+            Log.d(TAG, "Wake lock acquired")
+        } catch (t: Throwable) {
+            Log.w(TAG, "Failed to acquire wake lock", t)
+        }
+    }
+
+    private fun releaseWakeLock() {
+        try {
+            wakeLock?.let { if (it.isHeld) it.release() }
+        } catch (_: Throwable) {}
+        wakeLock = null
+    }
+
     private fun releasePlayer() {
         mediaPlayer?.let { mp ->
             try {
@@ -296,6 +418,8 @@ class AdhanPlayerService : Service() {
     private fun stopPlaybackAndSelf() {
         mainHandler.removeCallbacksAndMessages(null)
         releasePlayer()
+        volumeOverride.restore()
+        releaseWakeLock()
         audioFocus.abandon()
         cancelVibration()
         // Cancel the notification explicitly — covers the case where the service
@@ -320,6 +444,8 @@ class AdhanPlayerService : Service() {
     private fun stopPlaybackAndPersist() {
         mainHandler.removeCallbacksAndMessages(null)
         releasePlayer()
+        volumeOverride.restore()
+        releaseWakeLock()
         audioFocus.abandon()
         cancelVibration()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -343,6 +469,28 @@ class AdhanPlayerService : Service() {
         } else {
             @Suppress("DEPRECATION")
             v.vibrate(pattern, -1)
+        }
+    }
+
+    /**
+     * Short notification-style buzz for the "silenced adhan in vibrate mode"
+     * case (play-in-silent off + ringer in vibrate). Tagged USAGE_NOTIFICATION
+     * — unlike [vibrateFallback]'s USAGE_ALARM — so Do Not Disturb policy can
+     * suppress it: this is the "respect the user's silencing" path, not an alarm.
+     */
+    private fun vibrateNotification() {
+        val v = vibrator?.takeIf { it.hasVibrator() } ?: return
+        // Single gentle pulse — a notification-like tap, not an alarm pattern.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val effect = VibrationEffect.createOneShot(400, VibrationEffect.DEFAULT_AMPLITUDE)
+            val attrs = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+            v.vibrate(effect, attrs)
+        } else {
+            @Suppress("DEPRECATION")
+            v.vibrate(400)
         }
     }
 
