@@ -158,6 +158,16 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
     if (isPreNotification) {
       await showPreNotification(id, prayer, notificationTitle, mosque);
     } else {
+      // Guard: with POST_NOTIFICATIONS denied, the foreground service still runs
+      // and MediaPlayer still plays, but the OS suppresses the notification — the
+      // adhan would sound with no visible source. Skip playback so audio stays
+      // coupled to a visible notification. Checked before the service starts (not
+      // inside it) to avoid the background startForegroundService → startForeground
+      // 5s contract. The `finally` below still reschedules tomorrow's alarms.
+      if (!await plugin.areNotificationsEnabled()) {
+        Log.w('Notifications disabled — skipping adhan playback for $prayer');
+        return;
+      }
       // Fix A: clear the matching pre-notification (if still in the tray) before
       // the adhan service posts its own notification. Pre-notif ID = adhan ID + 100000.
       try {
