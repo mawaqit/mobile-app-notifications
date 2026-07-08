@@ -34,6 +34,9 @@ Future<void> playAdhanNative({
   required String title,
   required String body,
   required bool playInSilent,
+  bool customVolumeEnabled = false,
+  int adhanVolume = 100,
+  bool previewMode = false,
 }) async {
   String soundArg;
   if (sound == 'DEFAULT') {
@@ -58,6 +61,9 @@ Future<void> playAdhanNative({
       'sound': soundArg,
       'soundType': soundType.name,
       'streamUsage': streamUsage,
+      'customVolumeEnabled': customVolumeEnabled,
+      'adhanVolume': adhanVolume,
+      'previewMode': previewMode,
       'title': title,
       'body': body,
       'channelName': channelName,
@@ -69,5 +75,48 @@ Future<void> playAdhanNative({
   } catch (e, s) {
     Log.e('Native adhan playback failed — no audible fallback',
         error: e, stackTrace: s);
+  }
+}
+
+/// In-app settings preview. Plays the adhan through the SAME native path as a
+/// real notification (stream resolution + volume override + restore) but without
+/// the foreground notification, so it's a transient, lifecycle-bound preview.
+/// The host must call [stopAdhanNative] on sheet-close / app-background.
+Future<void> previewAdhanNative({
+  required String sound,
+  required SoundType soundType,
+  required bool playInSilent,
+  required int adhanVolume,
+  String title = '',
+  String body = '',
+}) async {
+  await playAdhanNative(
+    sound: sound,
+    soundType: soundType,
+    title: title,
+    body: body,
+    playInSilent: playInSilent,
+    customVolumeEnabled: true,
+    adhanVolume: adhanVolume,
+    previewMode: true,
+  );
+}
+
+/// Live-adjust the preview level on the active stream without restarting it.
+Future<void> updatePreviewVolumeNative(int adhanVolume) async {
+  try {
+    await _adhanPlayerChannel
+        .invokeMethod<void>('setPreviewVolume', {'adhanVolume': adhanVolume});
+  } catch (e, s) {
+    Log.e('Failed updating preview volume', error: e, stackTrace: s);
+  }
+}
+
+/// Stops native adhan playback (real or preview) and restores device volume.
+Future<void> stopAdhanNative() async {
+  try {
+    await _adhanPlayerChannel.invokeMethod<void>('stopAdhan');
+  } catch (e, s) {
+    Log.e('Failed stopping native adhan', error: e, stackTrace: s);
   }
 }

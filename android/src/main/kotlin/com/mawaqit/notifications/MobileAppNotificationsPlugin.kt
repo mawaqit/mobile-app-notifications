@@ -59,6 +59,9 @@ class MobileAppNotificationsPlugin : FlutterPlugin, MethodChannel.MethodCallHand
                     putExtra(AdhanPlayerService.EXTRA_SOUND, call.argument<String>("sound").orEmpty())
                     putExtra(AdhanPlayerService.EXTRA_SOUND_TYPE, call.argument<String>("soundType") ?: "customSound")
                     putExtra(AdhanPlayerService.EXTRA_STREAM_USAGE, call.argument<String>("streamUsage") ?: "alarm")
+                    putExtra(AdhanPlayerService.EXTRA_VOLUME_ENABLED, call.argument<Boolean>("customVolumeEnabled") ?: false)
+                    putExtra(AdhanPlayerService.EXTRA_VOLUME, call.argument<Int>("adhanVolume") ?: 100)
+                    putExtra(AdhanPlayerService.EXTRA_PREVIEW_MODE, call.argument<Boolean>("previewMode") ?: false)
                     putExtra(AdhanPlayerService.EXTRA_TITLE, call.argument<String>("title").orEmpty())
                     putExtra(AdhanPlayerService.EXTRA_BODY, call.argument<String>("body").orEmpty())
                     // i18n strings come from Flutter (single source of truth).
@@ -73,6 +76,15 @@ class MobileAppNotificationsPlugin : FlutterPlugin, MethodChannel.MethodCallHand
             "stopAdhan" -> {
                 val intent = Intent(context, AdhanPlayerService::class.java).apply {
                     action = AdhanPlayerService.ACTION_STOP
+                }
+                startService(context, intent)
+                result.success(null)
+            }
+            "setPreviewVolume" -> {
+                // Live-adjust the override level on the active preview stream.
+                val intent = Intent(context, AdhanPlayerService::class.java).apply {
+                    action = AdhanPlayerService.ACTION_SET_PREVIEW_VOLUME
+                    putExtra(AdhanPlayerService.EXTRA_VOLUME, call.argument<Int>("adhanVolume") ?: 100)
                 }
                 startService(context, intent)
                 result.success(null)

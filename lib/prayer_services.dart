@@ -67,7 +67,10 @@ class PrayerService {
               alarmId: alarmId,
               soundType: obj.soundType.name,
               playInSilent: obj.playInSilent,
-              useFullAdhanIOS: obj.useFullAdhanIOS);
+              customVolumeEnabled: obj.customVolumeEnabled,
+              adhanVolume: obj.adhanVolume,
+              useFullAdhanIOS: obj.useFullAdhanIOS
+              );
 
           prayersList.add(prayer);
         }
