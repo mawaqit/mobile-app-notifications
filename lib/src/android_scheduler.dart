@@ -113,7 +113,7 @@ Future<void> scheduleAndroid() async {
               allowWhileIdle: true,
               exact: true,
               wakeup: true,
-              rescheduleOnReboot: false,
+              rescheduleOnReboot: true,
               params: {
                 'sound': 'mawaqit_id',
                 'mosque': prayer.mosqueName,
@@ -171,7 +171,7 @@ Future<void> scheduleAndroid() async {
               allowWhileIdle: true,
               exact: true,
               wakeup: true,
-              rescheduleOnReboot: false,
+              rescheduleOnReboot: true,
               params: {
                 'index': index,
                 'sound': prayer.sound,
