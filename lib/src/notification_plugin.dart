@@ -40,3 +40,48 @@ Future<void> init() async {
   );
   await flutterLocalNotificationsPlugin.initialize(initializationSettings);
 }
+Future<void> cancelAllNotifications() async {
+  try {
+    await flutterLocalNotificationsPlugin.cancelAll();
+    Log.i('All notifications cancelled successfully.');
+  } catch (e, s) {
+    Log.e('Failed to cancel all notifications', error: e, stackTrace: s);
+  }
+}
+
+Future<void> deleteOrphanedChannels() async {
+  try {
+    final android = flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android == null) return;
+
+    final List<String> prayers = [
+      'fajr',
+      'shuruq',
+      'dhuhr',
+      'duhr',
+      'asr',
+      'maghrib',
+      'magrib',
+      'isha',
+      'ishaa',
+      'imsak'
+    ];
+
+    for (final name in prayers) {
+      final String channelIdWithSpace = 'Pre $name ';
+      final String silentChannelIdWithSpace = 'Silent Pre $name ';
+      final String channelId = 'Pre $name';
+      final String silentChannelId = 'Silent Pre $name';
+
+      await android.deleteNotificationChannel(channelIdWithSpace);
+      await android.deleteNotificationChannel(silentChannelIdWithSpace);
+      await android.deleteNotificationChannel(channelId);
+      await android.deleteNotificationChannel(silentChannelId);
+    }
+    Log.i('Orphaned pre-notification channels deletion completed.');
+  } catch (e, s) {
+    Log.e('Failed deleting orphaned notification channels', error: e, stackTrace: s);
+  }
+}

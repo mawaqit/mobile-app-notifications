@@ -67,6 +67,12 @@ class ScheduleAdhan {
 
   /// Stops the preview (or any native playback) and restores the device volume.
   Future<void> stopAdhanPreview() => stopAdhanNative();
+
+  /// Cancel all active notifications in status bar / drawer.
+  Future<void> cancelAllNotifications() => plugin.cancelAllNotifications();
+
+  /// Delete orphaned pre-notification channels created by older app versions.
+  Future<void> deleteOrphanedChannels() => plugin.deleteOrphanedChannels();
 }
 
 // ---------------------------------------------------------------------------
@@ -96,9 +102,9 @@ bool _isAlarmStillRelevant(Map<String, dynamic> data) {
   final prayerAtMillis = _readEpochMillis(data, 'prayerAtMillis');
   final isPreNotification = data['isPreNotification'] == true;
 
-  // Backward compatibility for already-scheduled alarms that don't carry timestamps yet.
+  // Stale alarms scheduled by older builds without timestamps must not fire.
   if (scheduledAtMillis == null || prayerAtMillis == null) {
-    return true;
+    return false;
   }
 
   if (isPreNotification) {

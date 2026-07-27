@@ -8,19 +8,19 @@ import 'notification_plugin.dart';
 Future<void> showPreNotification(
     int id, String prayer, String title, String body) async {
   final bool mute = await DeviceRingtoneMode.isMuted();
-  final String baseChannelId = prayer.toLowerCase();
-  final String channelId = 'Pre $baseChannelId ';
+  final String channelId = mute ? 'mawaqit_pre_adhan_silent' : 'mawaqit_pre_adhan';
+  final String channelName = mute ? 'Pre-Adhan Notifications (Silent)' : 'Pre-Adhan Notifications';
 
   final androidDetails = AndroidNotificationDetails(
-    mute ? 'Silent $channelId' : channelId,
-    mute ? 'Silent' : channelId,
-    channelDescription: 'Pre Adhan notifications for $prayer',
+    channelId,
+    channelName,
+    channelDescription: 'Notifications shown before the adhan',
     importance: Importance.max,
     priority: Priority.high,
     playSound: !mute,
     sound:
         mute ? const RawResourceAndroidNotificationSound('silent_sound') : null,
-    enableVibration: true,
+    enableVibration: !mute,
     largeIcon: const DrawableResourceAndroidBitmap('logo'),
     icon: 'notification_icon',
     onlyAlertOnce: false,
