@@ -2,6 +2,7 @@ library mobile_app_notifications;
 
 import 'dart:io';
 
+import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:mawaqit_core_logger/mawaqit_core_logger.dart';
 
 import 'models/prayers/prayer_name.dart';
@@ -98,7 +99,7 @@ bool _isAlarmStillRelevant(Map<String, dynamic> data) {
 
   // Backward compatibility for already-scheduled alarms that don't carry timestamps yet.
   if (scheduledAtMillis == null || prayerAtMillis == null) {
-    return true;
+    return false;
   }
 
   if (isPreNotification) {
@@ -119,6 +120,9 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
   try {
     if (!_isAlarmStillRelevant(data)) {
       Log.w('Skipping stale alarm $id');
+      if (Platform.isAndroid) {
+        await AndroidAlarmManager.cancel(id);
+      }
       return;
     }
     String sound = (data['sound'] as String?) ?? 'DEFAULT';
