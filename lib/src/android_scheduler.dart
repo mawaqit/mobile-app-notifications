@@ -54,12 +54,13 @@ Future<void> scheduleAndroid() async {
     return;
   }
   _isScheduling = true;
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  bool didScheduleAlarms = false;
   // Outer try/finally guarantees _isScheduling resets even on unhandled
   // exceptions — without it, one stray throw permanently blocks every future
   // scheduleAndroid() call (early-return at the top), and the user receives
   // no further notifications until app restart.
   try {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
 
     // Fetch the new prayer list before touching existing alarms. If getPrayers()
     // throws (transient DB read failure, plugin error) we keep the old alarms
@@ -88,7 +89,7 @@ Future<void> scheduleAndroid() async {
     _flushAlarmIdList();
     await prefs.remove('alarmIds');
     await prefs.setStringList('alarmIds', []);
-
+     didScheduleAlarms = true;
     for (var i = 0; i < prayersList.length; i++) {
       var prayer = prayersList[i];
 
@@ -204,10 +205,13 @@ Future<void> scheduleAndroid() async {
         }
       }
     }
-    await prefs.setStringList('alarmIds', _newAlarmIds);
 
     Log.i(_newAlarmIds.toList());
   } finally {
+    if (didScheduleAlarms) {
+      await prefs.setStringList('alarmIds', _newAlarmIds);
+    }
     _isScheduling = false;
+
   }
 }
