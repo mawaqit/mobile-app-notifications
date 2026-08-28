@@ -106,6 +106,11 @@ class AdhanPlayerService : Service() {
         }
     }
 
+    private var isPreviewMode: Boolean = false
+    private var currentTitle: String = ""
+    private var currentBody: String = ""
+    private var currentDefaultTitle: String = ""
+
     private val mainHandler = Handler(Looper.getMainLooper())
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -157,6 +162,11 @@ class AdhanPlayerService : Service() {
                 val channelDescription = intent?.getStringExtra(EXTRA_CHANNEL_DESCRIPTION).orEmpty()
                 val stopLabel = intent?.getStringExtra(EXTRA_STOP_LABEL) ?: "Stop"
                 val defaultTitle = intent?.getStringExtra(EXTRA_DEFAULT_TITLE) ?: "Adhan"
+
+                isPreviewMode = previewMode
+                currentTitle = title
+                currentBody = body
+                currentDefaultTitle = defaultTitle
 
                 // If the resolved stream will be silenced by the current ringer
                 // state (e.g. user has play-in-silent off + phone is muted),
@@ -436,12 +446,16 @@ class AdhanPlayerService : Service() {
 
     /**
      * Soft stop — used when the adhan/beep finishes naturally and when the
-     * call-fallback vibration window completes. Releases audio resources but
-     * leaves the notification in the tray so the user can see "the last
-     * prayer fired" until the next one arrives (auto-replaced via the fixed
-     * NOTIFICATION_ID) or they dismiss it manually.
+     * call-fallback vibration window completes. Releases audio resources and
+     * converts the notification from ongoing (FGS) to dismissible in the tray
+     * so the user can see "the last prayer fired" until the next one arrives
+     * (auto-replaced via the fixed NOTIFICATION_ID) or dismiss it manually.
      */
     private fun stopPlaybackAndPersist() {
+        if (isPreviewMode) {
+            stopPlaybackAndSelf()
+            return
+        }
         mainHandler.removeCallbacksAndMessages(null)
         releasePlayer()
         volumeOverride.restore()
@@ -450,7 +464,20 @@ class AdhanPlayerService : Service() {
         cancelVibration()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             stopForeground(STOP_FOREGROUND_DETACH)
+        } else {
+            @Suppress("DEPRECATION")
+            stopForeground(false)
         }
+        // Republish notification with ongoing = false and no Stop action so it
+        // can be dismissed on Android 12/13+ lock screen and notification shade.
+        val updatedNotification = buildNotification(
+            title = currentTitle,
+            body = currentBody,
+            defaultTitle = currentDefaultTitle,
+            isOngoing = false,
+            includeStopAction = false,
+        )
+        getSystemService(NotificationManager::class.java)?.notify(NOTIFICATION_ID, updatedNotification)
         stopSelf()
     }
 
@@ -537,17 +564,14 @@ class AdhanPlayerService : Service() {
         else -> audioManager.ringerMode == AudioManager.RINGER_MODE_NORMAL
     }
 
-    private fun startAsForeground(
+    private fun buildNotification(
         title: String,
         body: String,
-        channelName: String,
-        channelDescription: String,
-        stopLabel: String,
         defaultTitle: String,
+        isOngoing: Boolean,
         includeStopAction: Boolean,
-    ) {
-        ensureNotificationChannel(channelName, channelDescription)
-
+        stopLabel: String = "",
+    ): Notification {
         val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
         val contentIntent = launchIntent?.let {
             PendingIntent.getActivity(
@@ -569,23 +593,48 @@ class AdhanPlayerService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
+        return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(resolveSmallIcon())
             .setContentTitle(title.ifEmpty { defaultTitle })
             .setContentText(body)
-            .setOngoing(true)
+            .setOngoing(isOngoing)
+            .setAutoCancel(!isOngoing)
             // Each new play call (next prayer) should heads-up pop again, even
-            // though the notification ID is reused — false here is required for
-            // the persist-until-next-prayer UX. Channel sound is null, so this
-            // doesn't cause repeated audible alerts.
-            .setOnlyAlertOnce(false)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            // though the notification ID is reused. When persisting post-playback,
+            // onlyAlertOnce = true prevents re-alerting.
+            .setOnlyAlertOnce(!isOngoing)
+            .setPriority(if (isOngoing) NotificationCompat.PRIORITY_HIGH else NotificationCompat.PRIORITY_DEFAULT)
+            .setCategory(if (isOngoing) NotificationCompat.CATEGORY_ALARM else NotificationCompat.CATEGORY_REMINDER)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .apply { contentIntent?.let { setContentIntent(it) } }
             .setDeleteIntent(deletePendingIntent)
-            .apply { if (includeStopAction) addAction(0, stopLabel, stopPendingIntent) }
+            .apply {
+                if (includeStopAction && stopLabel.isNotEmpty()) {
+                    addAction(0, stopLabel, stopPendingIntent)
+                }
+            }
             .build()
+    }
+
+    private fun startAsForeground(
+        title: String,
+        body: String,
+        channelName: String,
+        channelDescription: String,
+        stopLabel: String,
+        defaultTitle: String,
+        includeStopAction: Boolean,
+    ) {
+        ensureNotificationChannel(channelName, channelDescription)
+
+        val notification = buildNotification(
+            title = title,
+            body = body,
+            defaultTitle = defaultTitle,
+            isOngoing = true,
+            includeStopAction = includeStopAction,
+            stopLabel = stopLabel,
+        )
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(
