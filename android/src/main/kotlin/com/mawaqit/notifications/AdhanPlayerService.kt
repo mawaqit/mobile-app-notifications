@@ -435,12 +435,7 @@ class AdhanPlayerService : Service() {
         // Cancel the notification explicitly — covers the case where the service
         // had previously detached so stopForeground alone wouldn't remove it.
         getSystemService(NotificationManager::class.java)?.cancel(NOTIFICATION_ID)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
-        } else {
-            @Suppress("DEPRECATION")
-            stopForeground(true)
-        }
+        stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
@@ -462,12 +457,7 @@ class AdhanPlayerService : Service() {
         releaseWakeLock()
         audioFocus.abandon()
         cancelVibration()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            stopForeground(STOP_FOREGROUND_DETACH)
-        } else {
-            @Suppress("DEPRECATION")
-            stopForeground(false)
-        }
+        stopForeground(STOP_FOREGROUND_DETACH)
         // Republish notification with ongoing = false and no Stop action so it
         // can be dismissed on Android 12/13+ lock screen and notification shade.
         val updatedNotification = buildNotification(
@@ -580,18 +570,31 @@ class AdhanPlayerService : Service() {
             )
         }
 
-        val stopIntent = Intent(this, AdhanPlayerService::class.java).apply {
-            action = ACTION_STOP
+        val stopPendingIntent = if (includeStopAction) {
+            val stopIntent = Intent(this, AdhanPlayerService::class.java).apply {
+                action = ACTION_STOP
+            }
+            PendingIntent.getService(
+                this, 1, stopIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        } else {
+            null
         }
-        val stopPendingIntent = PendingIntent.getService(
-            this, 1, stopIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        // Fires when the user swipes the notification away — stops playback.
-        val deletePendingIntent = PendingIntent.getService(
-            this, 2, stopIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+
+        // Fires when the user swipes the ongoing notification away during active playback.
+        // Omitted when isOngoing is false to avoid triggering background service starts on swipe.
+        val deletePendingIntent = if (isOngoing) {
+            val stopIntent = Intent(this, AdhanPlayerService::class.java).apply {
+                action = ACTION_STOP
+            }
+            PendingIntent.getService(
+                this, 2, stopIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        } else {
+            null
+        }
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(resolveSmallIcon())
@@ -607,9 +610,9 @@ class AdhanPlayerService : Service() {
             .setCategory(if (isOngoing) NotificationCompat.CATEGORY_ALARM else NotificationCompat.CATEGORY_REMINDER)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .apply { contentIntent?.let { setContentIntent(it) } }
-            .setDeleteIntent(deletePendingIntent)
+            .apply { deletePendingIntent?.let { setDeleteIntent(it) } }
             .apply {
-                if (includeStopAction && stopLabel.isNotEmpty()) {
+                if (stopPendingIntent != null && stopLabel.isNotEmpty()) {
                     addAction(0, stopLabel, stopPendingIntent)
                 }
             }
