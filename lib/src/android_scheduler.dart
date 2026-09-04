@@ -190,6 +190,7 @@ Future<void> scheduleAndroid() async {
                 'playInSilent': prayer.playInSilent,
                 'customVolumeEnabled': prayer.customVolumeEnabled,
                 'adhanVolume': prayer.adhanVolume,
+                'muteWithVolumeKeys': prayer.muteWithVolumeKeys,
               });
           Log.i(
               'Sound ${prayer.sound} Notification scheduled for ${prayer.prayerName} at : $notificationTime Id: ${prayer.alarmId}');

@@ -37,6 +37,7 @@ Future<void> playAdhanNative({
   bool customVolumeEnabled = false,
   int adhanVolume = 100,
   bool previewMode = false,
+  bool muteWithVolumeKeys = false,
 }) async {
   String soundArg;
   if (sound == 'DEFAULT') {
@@ -70,8 +71,10 @@ Future<void> playAdhanNative({
       'channelDescription': channelDescription,
       'stopLabel': stopLabel,
       'defaultTitle': defaultTitle,
+      'muteWithVolumeKeys': muteWithVolumeKeys,
     });
-    Log.i('Adhan dispatched to native player (usage=$streamUsage)');
+    Log.i(
+        'Adhan dispatched to native player (usage=$streamUsage, muteWithVolumeKeys=$muteWithVolumeKeys)');
   } catch (e, s) {
     Log.e('Native adhan playback failed — no audible fallback',
         error: e, stackTrace: s);

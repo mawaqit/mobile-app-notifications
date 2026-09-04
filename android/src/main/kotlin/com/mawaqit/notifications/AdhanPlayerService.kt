@@ -5,8 +5,10 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
 import android.media.AudioManager
@@ -23,6 +25,7 @@ import android.os.VibratorManager
 import android.util.Log
 import android.view.KeyEvent
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 
 /**
  * Foreground service that plays the adhan via MediaPlayer on a user-selectable
@@ -31,6 +34,8 @@ import androidx.core.app.NotificationCompat
  * Why this exists: notification-played sounds can be silenced by a single
  * volume-key press on Android (system-level UX hook). Owning playback in a
  * service detaches it from that hook — volume keys then only adjust loudness.
+ * When the "muteWithVolumeKeys" feature is enabled, a dynamic volume receiver
+ * captures hardware volume key presses to silence the playback.
  */
 class AdhanPlayerService : Service() {
 
@@ -51,6 +56,7 @@ class AdhanPlayerService : Service() {
         const val EXTRA_STREAM_USAGE = "streamUsage" // "alarm" | "ringtone" | "notification" | "media"
         const val EXTRA_VOLUME_ENABLED = "customVolumeEnabled" // per-prayer volume override on/off
         const val EXTRA_VOLUME = "adhanVolume"      // 0..100 percent, applied when enabled
+        const val EXTRA_MUTE_WITH_VOLUME_KEYS = "muteWithVolumeKeys" // mute adhan via physical volume keys
         // When true, this playback is the in-app settings preview: it skips the
         // foreground notification (so it doesn't persist) but uses the exact same
         // stream resolution + volume override + restore as a real adhan. The host
@@ -68,6 +74,7 @@ class AdhanPlayerService : Service() {
     }
 
     private var mediaPlayer: MediaPlayer? = null
+    private var volumeReceiver: BroadcastReceiver? = null
 
     // Temporarily overrides a stream's volume for the per-prayer adhan level and
     // restores it afterwards, with process-death self-heal. All the override
@@ -155,6 +162,7 @@ class AdhanPlayerService : Service() {
                 val volumeEnabled = intent?.getBooleanExtra(EXTRA_VOLUME_ENABLED, false) ?: false
                 val volumePercent = intent?.getIntExtra(EXTRA_VOLUME, StreamVolumeOverride.MAX_VOLUME_PERCENT)
                     ?: StreamVolumeOverride.MAX_VOLUME_PERCENT
+                val muteWithVolumeKeys = intent?.getBooleanExtra(EXTRA_MUTE_WITH_VOLUME_KEYS, false) ?: false
                 val previewMode = intent?.getBooleanExtra(EXTRA_PREVIEW_MODE, false) ?: false
                 val title = intent?.getStringExtra(EXTRA_TITLE).orEmpty()
                 val body = intent?.getStringExtra(EXTRA_BODY).orEmpty()
@@ -185,7 +193,7 @@ class AdhanPlayerService : Service() {
                 }
 
                 if (audible) {
-                    startPlayback(sound, soundType, streamUsage, volumeEnabled, volumePercent)
+                    startPlayback(sound, soundType, streamUsage, volumeEnabled, volumePercent, muteWithVolumeKeys)
                 } else if (previewMode) {
                     // Nothing to play (muted) and no notification to show — just stop.
                     stopPlaybackAndSelf()
@@ -202,6 +210,7 @@ class AdhanPlayerService : Service() {
     }
 
     override fun onDestroy() {
+        unregisterVolumeReceiver()
         releasePlayer()
         // Final safety net — guarantees the device volume is never left at the
         // adhan override level, and the wake lock never leaks, if the service is
@@ -219,7 +228,9 @@ class AdhanPlayerService : Service() {
         streamUsage: String,
         volumeEnabled: Boolean,
         volumePercent: Int,
+        muteWithVolumeKeys: Boolean = false,
     ) {
+        unregisterVolumeReceiver()
         releasePlayer()
 
         // True for any app driving the music stream — covers video players
@@ -271,11 +282,14 @@ class AdhanPlayerService : Service() {
             focusAttributes = attrs
         }
 
-        // Fall back to vibrate only when a real call is active
-        // (AudioManager.mode). Any other denial — OEM background policy,
-        // media app refusing to release — proceeds with playback; focus is
-        // cooperative coordination, MediaPlayer doesn't require it to
-        // produce sound.
+        // Request audio focus before start(). If focus is denied:
+        //   - with a call active (MODE_IN_CALL / MODE_IN_COMMUNICATION) →
+        //     skip audible playback and pulse the vibrator 3× instead so
+        //     the user isn't startled by a blast during a conversation.
+        //   - without a call (e.g. navigation app refusing to duck, video /
+        //     media app refusing to release) → proceeds with playback; focus is
+        //     cooperative coordination, MediaPlayer doesn't require it to
+        //     produce sound.
         val focusGranted = audioFocus.request(focusAttributes)
         if (!focusGranted) {
             val callActive = audioManager.mode == AudioManager.MODE_IN_CALL ||
@@ -350,14 +364,57 @@ class AdhanPlayerService : Service() {
             }
             player.start()
             mediaPlayer = player
+
+            if (muteWithVolumeKeys && !isPreviewMode) {
+                registerVolumeReceiver()
+            }
+
             val playbackUsageLog = if (mediaActive) "alarm" else streamUsage
             val focusUsageLog = if (mediaActive) "media" else streamUsage
-            Log.d(TAG, "Adhan playback started (playback=$playbackUsageLog, focus=$focusUsageLog, requested=$streamUsage, mediaActive=$mediaActive, sound=$sound, type=$soundType)")
+            Log.d(TAG, "Adhan playback started (playback=$playbackUsageLog, focus=$focusUsageLog, requested=$streamUsage, mediaActive=$mediaActive, sound=$sound, type=$soundType, muteWithVolumeKeys=$muteWithVolumeKeys)")
         } catch (t: Throwable) {
             Log.e(TAG, "Failed to start playback", t)
             try { player.release() } catch (_: Throwable) {}
             stopPlaybackAndSelf()
         }
+    }
+
+    private fun registerVolumeReceiver() {
+        if (volumeReceiver != null) return
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                if (isInitialStickyBroadcast) return
+                if (intent?.action == "android.media.VOLUME_CHANGED_ACTION") {
+                    if (mediaPlayer?.isPlaying == true) {
+                        Log.i(TAG, "Hardware volume key pressed during playback -> Silencing Adhan")
+                        stopPlaybackAndSelf()
+                    }
+                }
+            }
+        }
+        val filter = IntentFilter("android.media.VOLUME_CHANGED_ACTION")
+        try {
+            ContextCompat.registerReceiver(
+                this,
+                receiver,
+                filter,
+                ContextCompat.RECEIVER_EXPORTED
+            )
+            volumeReceiver = receiver
+            Log.d(TAG, "Registered volume receiver for hardware volume button silencing")
+        } catch (t: Throwable) {
+            Log.w(TAG, "Failed to register volume receiver", t)
+        }
+    }
+
+    private fun unregisterVolumeReceiver() {
+        volumeReceiver?.let {
+            try {
+                unregisterReceiver(it)
+                Log.d(TAG, "Unregistered volume receiver")
+            } catch (_: Throwable) {}
+        }
+        volumeReceiver = null
     }
 
     private fun parseSoundUri(raw: String): Uri? {
@@ -427,6 +484,7 @@ class AdhanPlayerService : Service() {
      */
     private fun stopPlaybackAndSelf() {
         mainHandler.removeCallbacksAndMessages(null)
+        unregisterVolumeReceiver()
         releasePlayer()
         volumeOverride.restore()
         releaseWakeLock()
@@ -452,6 +510,7 @@ class AdhanPlayerService : Service() {
             return
         }
         mainHandler.removeCallbacksAndMessages(null)
+        unregisterVolumeReceiver()
         releasePlayer()
         volumeOverride.restore()
         releaseWakeLock()

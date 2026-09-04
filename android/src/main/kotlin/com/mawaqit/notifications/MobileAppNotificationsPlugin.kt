@@ -64,6 +64,7 @@ class MobileAppNotificationsPlugin : FlutterPlugin, MethodChannel.MethodCallHand
                     putExtra(AdhanPlayerService.EXTRA_PREVIEW_MODE, call.argument<Boolean>("previewMode") ?: false)
                     putExtra(AdhanPlayerService.EXTRA_TITLE, call.argument<String>("title").orEmpty())
                     putExtra(AdhanPlayerService.EXTRA_BODY, call.argument<String>("body").orEmpty())
+                    putExtra(AdhanPlayerService.EXTRA_MUTE_WITH_VOLUME_KEYS, call.argument<Boolean>("muteWithVolumeKeys") ?: false)
                     // i18n strings come from Flutter (single source of truth).
                     putExtra(AdhanPlayerService.EXTRA_CHANNEL_NAME, call.argument<String>("channelName") ?: "Adhan playback")
                     putExtra(AdhanPlayerService.EXTRA_CHANNEL_DESCRIPTION, call.argument<String>("channelDescription").orEmpty())
