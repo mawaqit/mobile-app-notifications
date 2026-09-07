@@ -13,6 +13,9 @@ import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.MediaPlayer
+import android.media.VolumeProvider
+import android.media.session.MediaSession
+import android.media.session.PlaybackState
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
@@ -75,6 +78,7 @@ class AdhanPlayerService : Service() {
 
     private var mediaPlayer: MediaPlayer? = null
     private var volumeReceiver: BroadcastReceiver? = null
+    private var mediaSession: MediaSession? = null
 
     // Temporarily overrides a stream's volume for the per-prayer adhan level and
     // restores it afterwards, with process-death self-heal. All the override
@@ -210,6 +214,7 @@ class AdhanPlayerService : Service() {
     }
 
     override fun onDestroy() {
+        releaseMediaSession()
         unregisterVolumeReceiver()
         releasePlayer()
         // Final safety net — guarantees the device volume is never left at the
@@ -230,6 +235,7 @@ class AdhanPlayerService : Service() {
         volumePercent: Int,
         muteWithVolumeKeys: Boolean = false,
     ) {
+        releaseMediaSession()
         unregisterVolumeReceiver()
         releasePlayer()
 
@@ -366,6 +372,7 @@ class AdhanPlayerService : Service() {
             mediaPlayer = player
 
             if (muteWithVolumeKeys && !isPreviewMode) {
+                setupMediaSession()
                 registerVolumeReceiver()
             }
 
@@ -377,6 +384,42 @@ class AdhanPlayerService : Service() {
             try { player.release() } catch (_: Throwable) {}
             stopPlaybackAndSelf()
         }
+    }
+
+    private fun setupMediaSession() {
+        if (mediaSession != null) return
+        try {
+            val session = MediaSession(this, "AdhanPlayerMediaSession")
+            session.setPlaybackToRemote(object : VolumeProvider(VOLUME_CONTROL_RELATIVE, 100, 50) {
+                override fun onAdjustVolume(direction: Int) {
+                    Log.i(TAG, "MediaSession hardware volume key pressed (direction=$direction) -> Silencing Adhan")
+                    mainHandler.post {
+                        stopPlaybackAndSelf()
+                    }
+                }
+            })
+            val state = PlaybackState.Builder()
+                .setState(PlaybackState.STATE_PLAYING, PlaybackState.PLAYBACK_POSITION_UNKNOWN, 1.0f)
+                .setActions(PlaybackState.ACTION_PLAY or PlaybackState.ACTION_STOP or PlaybackState.ACTION_PAUSE)
+                .build()
+            session.setPlaybackState(state)
+            session.isActive = true
+            mediaSession = session
+            Log.d(TAG, "MediaSession registered for screen-off hardware volume button interception")
+        } catch (t: Throwable) {
+            Log.w(TAG, "Failed to initialize MediaSession", t)
+        }
+    }
+
+    private fun releaseMediaSession() {
+        mediaSession?.let {
+            try {
+                it.isActive = false
+                it.release()
+                Log.d(TAG, "MediaSession released")
+            } catch (_: Throwable) {}
+        }
+        mediaSession = null
     }
 
     private fun registerVolumeReceiver() {
@@ -489,6 +532,7 @@ class AdhanPlayerService : Service() {
      */
     private fun stopPlaybackAndSelf() {
         mainHandler.removeCallbacksAndMessages(null)
+        releaseMediaSession()
         unregisterVolumeReceiver()
         releasePlayer()
         volumeOverride.restore()
@@ -515,6 +559,7 @@ class AdhanPlayerService : Service() {
             return
         }
         mainHandler.removeCallbacksAndMessages(null)
+        releaseMediaSession()
         unregisterVolumeReceiver()
         releasePlayer()
         volumeOverride.restore()
