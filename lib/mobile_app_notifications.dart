@@ -58,7 +58,6 @@ class ScheduleAdhan {
         ),
         playInSilent: playInSilent,
         adhanVolume: adhanVolume,
-        muteWithVolumeKeys: muteWithVolumeKeys,
         title: title,
         body: body,
       );
