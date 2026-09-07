@@ -384,15 +384,20 @@ class AdhanPlayerService : Service() {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 if (isInitialStickyBroadcast) return
-                if (intent?.action == "android.media.VOLUME_CHANGED_ACTION") {
-                    if (mediaPlayer?.isPlaying == true) {
+                val action = intent?.action
+                if (action == "android.media.VOLUME_CHANGED_ACTION" ||
+                    action == AudioManager.RINGER_MODE_CHANGED_ACTION) {
+                    if (mediaPlayer != null) {
                         Log.i(TAG, "Hardware volume key pressed during playback -> Silencing Adhan")
                         stopPlaybackAndSelf()
                     }
                 }
             }
         }
-        val filter = IntentFilter("android.media.VOLUME_CHANGED_ACTION")
+        val filter = IntentFilter().apply {
+            addAction("android.media.VOLUME_CHANGED_ACTION")
+            addAction(AudioManager.RINGER_MODE_CHANGED_ACTION)
+        }
         try {
             ContextCompat.registerReceiver(
                 this,
