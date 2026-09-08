@@ -13,12 +13,16 @@ import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.MediaPlayer
+import android.media.VolumeProvider
+import android.media.session.MediaSession
+import android.media.session.PlaybackState
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.PowerManager
+import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -34,8 +38,9 @@ import androidx.core.content.ContextCompat
  * Why this exists: notification-played sounds can be silenced by a single
  * volume-key press on Android (system-level UX hook). Owning playback in a
  * service detaches it from that hook — volume keys then only adjust loudness.
- * When the "muteWithVolumeKeys" feature is enabled, a dynamic volume receiver
- * captures hardware volume key presses to silence the playback.
+ * When the "muteWithVolumeKeys" feature is enabled, a dual-layer interception
+ * (MediaSession remote volume provider + dynamic broadcast receiver) captures
+ * hardware volume key presses to silence the playback cleanly.
  */
 class AdhanPlayerService : Service() {
 
@@ -71,10 +76,15 @@ class AdhanPlayerService : Service() {
         const val EXTRA_CHANNEL_DESCRIPTION = "channelDescription"
         const val EXTRA_STOP_LABEL = "stopLabel"
         const val EXTRA_DEFAULT_TITLE = "defaultTitle"
+
+        // Grace period (ms) on startup to ignore self-inflicted volume changes or initial broadcasts.
+        private const val STARTUP_IGNORE_WINDOW_MS = 300L
     }
 
     private var mediaPlayer: MediaPlayer? = null
     private var volumeReceiver: BroadcastReceiver? = null
+    private var mediaSession: MediaSession? = null
+    private var playbackStartTime: Long = 0L
 
     // Temporarily overrides a stream's volume for the per-prayer adhan level and
     // restores it afterwards, with process-death self-heal. All the override
@@ -210,6 +220,7 @@ class AdhanPlayerService : Service() {
     }
 
     override fun onDestroy() {
+        releaseMediaSession()
         unregisterVolumeReceiver()
         releasePlayer()
         // Final safety net — guarantees the device volume is never left at the
@@ -230,6 +241,7 @@ class AdhanPlayerService : Service() {
         volumePercent: Int,
         muteWithVolumeKeys: Boolean = false,
     ) {
+        releaseMediaSession()
         unregisterVolumeReceiver()
         releasePlayer()
 
@@ -364,8 +376,10 @@ class AdhanPlayerService : Service() {
             }
             player.start()
             mediaPlayer = player
+            playbackStartTime = SystemClock.elapsedRealtime()
 
             if (muteWithVolumeKeys && !isPreviewMode) {
+                setupMediaSession()
                 registerVolumeReceiver()
             }
 
@@ -379,16 +393,78 @@ class AdhanPlayerService : Service() {
         }
     }
 
+    private fun setupMediaSession() {
+        if (mediaSession != null) return
+        try {
+            val session = MediaSession(this, "AdhanPlayerMediaSession")
+            session.setCallback(object : MediaSession.Callback() {
+                override fun onMediaButtonEvent(mediaButtonIntent: Intent): Boolean {
+                    @Suppress("DEPRECATION")
+                    val keyEvent = mediaButtonIntent.getParcelableExtra<KeyEvent>(Intent.EXTRA_KEY_EVENT)
+                    if (keyEvent != null && keyEvent.action == KeyEvent.ACTION_DOWN) {
+                        when (keyEvent.keyCode) {
+                            KeyEvent.KEYCODE_VOLUME_UP,
+                            KeyEvent.KEYCODE_VOLUME_DOWN,
+                            KeyEvent.KEYCODE_VOLUME_MUTE,
+                            KeyEvent.KEYCODE_HEADSETHOOK,
+                            KeyEvent.KEYCODE_MEDIA_PAUSE,
+                            KeyEvent.KEYCODE_MEDIA_STOP -> {
+                                if (SystemClock.elapsedRealtime() - playbackStartTime > STARTUP_IGNORE_WINDOW_MS) {
+                                    Log.i(TAG, "Hardware key pressed via MediaSession callback (${keyEvent.keyCode}) -> Silencing Adhan")
+                                    mainHandler.post { stopPlaybackAndSelf() }
+                                    return true
+                                }
+                            }
+                        }
+                    }
+                    return super.onMediaButtonEvent(mediaButtonIntent)
+                }
+            })
+            session.setPlaybackToRemote(object : VolumeProvider(VOLUME_CONTROL_RELATIVE, 100, 50) {
+                override fun onAdjustVolume(direction: Int) {
+                    if (SystemClock.elapsedRealtime() - playbackStartTime > STARTUP_IGNORE_WINDOW_MS) {
+                        Log.i(TAG, "Hardware volume key pressed via VolumeProvider (direction=$direction) -> Silencing Adhan")
+                        mainHandler.post {
+                            stopPlaybackAndSelf()
+                        }
+                    }
+                }
+            })
+            val state = PlaybackState.Builder()
+                .setState(PlaybackState.STATE_PLAYING, PlaybackState.PLAYBACK_POSITION_UNKNOWN, 1.0f)
+                .setActions(PlaybackState.ACTION_PLAY or PlaybackState.ACTION_STOP or PlaybackState.ACTION_PAUSE or PlaybackState.ACTION_PLAY_PAUSE)
+                .build()
+            session.setPlaybackState(state)
+            session.isActive = true
+            mediaSession = session
+            Log.d(TAG, "MediaSession registered for hardware volume button interception")
+        } catch (t: Throwable) {
+            Log.w(TAG, "Failed to initialize MediaSession", t)
+        }
+    }
+
+    private fun releaseMediaSession() {
+        mediaSession?.let {
+            try {
+                it.isActive = false
+                it.release()
+                Log.d(TAG, "MediaSession released")
+            } catch (_: Throwable) {}
+        }
+        mediaSession = null
+    }
+
     private fun registerVolumeReceiver() {
         if (volumeReceiver != null) return
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 if (isInitialStickyBroadcast) return
+                if (SystemClock.elapsedRealtime() - playbackStartTime <= STARTUP_IGNORE_WINDOW_MS) return
                 val action = intent?.action
                 if (action == "android.media.VOLUME_CHANGED_ACTION" ||
                     action == AudioManager.RINGER_MODE_CHANGED_ACTION) {
                     if (mediaPlayer != null) {
-                        Log.i(TAG, "Hardware volume key pressed during playback -> Silencing Adhan")
+                        Log.i(TAG, "Hardware volume/ringer change event received -> Silencing Adhan")
                         stopPlaybackAndSelf()
                     }
                 }
@@ -438,76 +514,63 @@ class AdhanPlayerService : Service() {
 
     /** The AudioManager stream that a given playback usage routes its volume to. */
     private fun streamForUsage(usage: Int): Int = when (usage) {
-        AudioAttributes.USAGE_ALARM                 -> AudioManager.STREAM_ALARM
         AudioAttributes.USAGE_NOTIFICATION_RINGTONE -> AudioManager.STREAM_RING
         AudioAttributes.USAGE_NOTIFICATION          -> AudioManager.STREAM_NOTIFICATION
         AudioAttributes.USAGE_MEDIA                 -> AudioManager.STREAM_MUSIC
         else                                        -> AudioManager.STREAM_ALARM
     }
 
-    /**
-     * Acquire a partial wake lock with a generous safety timeout (far longer
-     * than any adhan) so a missed release can never leak it. Reference counting
-     * is off so repeated acquires are idempotent.
-     */
     private fun acquireWakeLock() {
         if (wakeLock?.isHeld == true) return
-        try {
-            wakeLock = powerManager.newWakeLock(
-                PowerManager.PARTIAL_WAKE_LOCK,
-                "mawaqit:adhan_playback",
-            ).apply {
-                setReferenceCounted(false)
-                acquire(10 * 60 * 1000L) // 10-min hard cap; adhan is far shorter
-            }
-            Log.d(TAG, "Wake lock acquired")
-        } catch (t: Throwable) {
-            Log.w(TAG, "Failed to acquire wake lock", t)
+        wakeLock = powerManager.newWakeLock(
+            PowerManager.PARTIAL_WAKE_LOCK,
+            "$TAG:PlaybackWakeLock"
+        ).apply {
+            // Keep CPU awake up to 10 minutes (covers the longest adhan with margin).
+            acquire(10 * 60 * 1000L)
         }
     }
 
     private fun releaseWakeLock() {
         try {
-            wakeLock?.let { if (it.isHeld) it.release() }
+            if (wakeLock?.isHeld == true) wakeLock?.release()
         } catch (_: Throwable) {}
         wakeLock = null
     }
 
     private fun releasePlayer() {
-        mediaPlayer?.let { mp ->
+        mediaPlayer?.let {
             try {
-                if (mp.isPlaying) mp.stop()
+                if (it.isPlaying) it.stop()
+                it.release()
             } catch (_: Throwable) {}
-            try { mp.release() } catch (_: Throwable) {}
         }
         mediaPlayer = null
     }
 
     /**
-     * Full cleanup — used for explicit user actions (Stop / swipe), errors,
-     * and audio focus loss. The notification is removed.
+     * Used on explicit user stop (tap Stop in tray, swipe notification away,
+     * or hardware volume key press when enabled).
+     * Tears down playback, cleans up locks and focus, and removes the
+     * notification entirely so the tray is clean.
      */
     private fun stopPlaybackAndSelf() {
         mainHandler.removeCallbacksAndMessages(null)
+        releaseMediaSession()
         unregisterVolumeReceiver()
         releasePlayer()
         volumeOverride.restore()
         releaseWakeLock()
         audioFocus.abandon()
         cancelVibration()
-        // Cancel the notification explicitly — covers the case where the service
-        // had previously detached so stopForeground alone wouldn't remove it.
-        getSystemService(NotificationManager::class.java)?.cancel(NOTIFICATION_ID)
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
     /**
-     * Soft stop — used when the adhan/beep finishes naturally and when the
-     * call-fallback vibration window completes. Releases audio resources and
-     * converts the notification from ongoing (FGS) to dismissible in the tray
-     * so the user can see "the last prayer fired" until the next one arrives
-     * (auto-replaced via the fixed NOTIFICATION_ID) or dismiss it manually.
+     * Used on natural playback completion, focus-loss (e.g. incoming call),
+     * or silenced-stream timeouts. Tears down audio resources and leaves the
+     * notification visible in the shade as a non-ongoing reminder.
      */
     private fun stopPlaybackAndPersist() {
         if (isPreviewMode) {
@@ -515,6 +578,7 @@ class AdhanPlayerService : Service() {
             return
         }
         mainHandler.removeCallbacksAndMessages(null)
+        releaseMediaSession()
         unregisterVolumeReceiver()
         releasePlayer()
         volumeOverride.restore()
