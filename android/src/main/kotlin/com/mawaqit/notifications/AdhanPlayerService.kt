@@ -374,12 +374,18 @@ class AdhanPlayerService : Service() {
                     if (mediaActive) AudioAttributes.USAGE_ALARM else mapUsage(streamUsage)
                 volumeOverride.apply(streamForUsage(effectiveUsage), volumePercent)
             }
+            // Armed BEFORE start(): the first press can land within
+            // milliseconds, and a session registered afterwards misses it.
+            if (muteWithVolumeKeys && !isPreviewMode) {
+                setupMediaSession()
+            }
             player.start()
             mediaPlayer = player
             playbackStartTime = SystemClock.elapsedRealtime()
 
+            // Armed AFTER start(): volumeOverride.apply() above writes the
+            // stream volume itself, which the receiver would read as a press.
             if (muteWithVolumeKeys && !isPreviewMode) {
-                setupMediaSession()
                 registerVolumeReceiver()
             }
 
@@ -422,11 +428,12 @@ class AdhanPlayerService : Service() {
             })
             session.setPlaybackToRemote(object : VolumeProvider(VOLUME_CONTROL_RELATIVE, 100, 50) {
                 override fun onAdjustVolume(direction: Int) {
-                    if (SystemClock.elapsedRealtime() - playbackStartTime > STARTUP_IGNORE_WINDOW_MS) {
-                        Log.i(TAG, "Hardware volume key pressed via VolumeProvider (direction=$direction) -> Silencing Adhan")
-                        mainHandler.post {
-                            stopPlaybackAndSelf()
-                        }
+                    // No startup guard: an adjust here can only come from a real
+                    // key press, and the session has already consumed that key —
+                    // so discarding it leaves the receiver blind too.
+                    Log.i(TAG, "Hardware volume key pressed via VolumeProvider (direction=$direction) -> Silencing Adhan")
+                    mainHandler.post {
+                        stopPlaybackAndSelf()
                     }
                 }
             })
