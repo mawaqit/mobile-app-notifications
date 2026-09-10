@@ -43,6 +43,7 @@ class PrayerNotification {
   /// standard UN notification path runs and iOS caps the sound at ~30s.
   /// Pre-notifications stay on the UN path regardless.
   final bool useFullAdhanIOS;
+  final bool muteWithVolumeKeys;
 
   static getDBPrayerKeyByPrayer(int? prayer) {
     switch (prayer) {
@@ -91,6 +92,7 @@ class PrayerNotification {
     this.customVolumeEnabled = false,
     this.adhanVolume = kMaxAdhanVolume,
         this.useFullAdhanIOS = false,
+        this.muteWithVolumeKeys = false,
   });
 
   PrayerNotification.fromJson(Map<String, dynamic> json)
@@ -105,7 +107,8 @@ class PrayerNotification {
         playInSilent = json['playInSilent'] ?? false,
         customVolumeEnabled = json['customVolumeEnabled'] ?? false,
         adhanVolume = json['adhanVolume'] ?? kMaxAdhanVolume,
-        useFullAdhanIOS = json['useFullAdhanIOS'] ?? false;
+        useFullAdhanIOS = json['useFullAdhanIOS'] ?? false,
+        muteWithVolumeKeys = json['muteWithVolumeKeys'] ?? false;
 
   Map<String, dynamic> toJson() {
     return {
@@ -118,6 +121,7 @@ class PrayerNotification {
       'customVolumeEnabled': customVolumeEnabled,
       'adhanVolume': adhanVolume,
       'useFullAdhanIOS': useFullAdhanIOS,
+      'muteWithVolumeKeys': muteWithVolumeKeys,
     };
   }
 }

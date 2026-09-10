@@ -142,6 +142,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
     bool playInSilent = data['playInSilent'] ?? false;
     bool customVolumeEnabled = data['customVolumeEnabled'] ?? false;
     int adhanVolume = data['adhanVolume'] ?? 100;
+    bool muteWithVolumeKeys = data['muteWithVolumeKeys'] ?? false;
 
     String notificationTitle;
     if (isPreNotification) {
@@ -185,6 +186,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
         playInSilent: playInSilent,
         customVolumeEnabled: customVolumeEnabled,
         adhanVolume: adhanVolume,
+        muteWithVolumeKeys: muteWithVolumeKeys,
       );
     }
 

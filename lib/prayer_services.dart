@@ -69,7 +69,8 @@ class PrayerService {
               playInSilent: obj.playInSilent,
               customVolumeEnabled: obj.customVolumeEnabled,
               adhanVolume: obj.adhanVolume,
-              useFullAdhanIOS: obj.useFullAdhanIOS
+              useFullAdhanIOS: obj.useFullAdhanIOS,
+              muteWithVolumeKeys: obj.muteWithVolumeKeys
               );
 
           prayersList.add(prayer);

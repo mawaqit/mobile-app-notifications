@@ -7,6 +7,7 @@ class NotificationInfoModel {
   bool customVolumeEnabled;
   int adhanVolume;
   bool useFullAdhanIOS;
+  bool muteWithVolumeKeys;
   NotificationInfoModel({
     required this.mosqueName,
     required this.sound,
@@ -19,5 +20,6 @@ class NotificationInfoModel {
     this.customVolumeEnabled = false,
     this.adhanVolume = 100,
     this.useFullAdhanIOS = false,
+    this.muteWithVolumeKeys = false,
   });
 }
