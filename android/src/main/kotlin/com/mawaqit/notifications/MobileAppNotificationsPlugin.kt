@@ -1,11 +1,15 @@
 package com.mawaqit.notifications
 
+import android.Manifest
 import android.app.ActivityManager
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -54,6 +58,12 @@ class MobileAppNotificationsPlugin : FlutterPlugin, MethodChannel.MethodCallHand
 
         when (call.method) {
             "playAdhan" -> {
+                val previewMode = call.argument<Boolean>("previewMode") ?: false
+                if (!previewMode && !areNotificationsEnabled(context)) {
+                    Log.w(TAG, "Notifications disabled - skipping adhan playback")
+                    result.success(null)
+                    return
+                }
                 val intent = Intent(context, AdhanPlayerService::class.java).apply {
                     action = AdhanPlayerService.ACTION_PLAY
                     putExtra(AdhanPlayerService.EXTRA_SOUND, call.argument<String>("sound").orEmpty())
@@ -61,7 +71,7 @@ class MobileAppNotificationsPlugin : FlutterPlugin, MethodChannel.MethodCallHand
                     putExtra(AdhanPlayerService.EXTRA_STREAM_USAGE, call.argument<String>("streamUsage") ?: "alarm")
                     putExtra(AdhanPlayerService.EXTRA_VOLUME_ENABLED, call.argument<Boolean>("customVolumeEnabled") ?: false)
                     putExtra(AdhanPlayerService.EXTRA_VOLUME, call.argument<Int>("adhanVolume") ?: 100)
-                    putExtra(AdhanPlayerService.EXTRA_PREVIEW_MODE, call.argument<Boolean>("previewMode") ?: false)
+                    putExtra(AdhanPlayerService.EXTRA_PREVIEW_MODE, previewMode)
                     putExtra(AdhanPlayerService.EXTRA_TITLE, call.argument<String>("title").orEmpty())
                     putExtra(AdhanPlayerService.EXTRA_BODY, call.argument<String>("body").orEmpty())
                     putExtra(AdhanPlayerService.EXTRA_MUTE_WITH_VOLUME_KEYS, call.argument<Boolean>("muteWithVolumeKeys") ?: false)
@@ -91,6 +101,22 @@ class MobileAppNotificationsPlugin : FlutterPlugin, MethodChannel.MethodCallHand
                 result.success(null)
             }
             else -> result.notImplemented()
+        }
+    }
+
+    private fun areNotificationsEnabled(context: Context): Boolean {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                false
+            } else {
+                NotificationManagerCompat.from(context).areNotificationsEnabled()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed reading notification permission - assuming enabled", e)
+            true
         }
     }
 
