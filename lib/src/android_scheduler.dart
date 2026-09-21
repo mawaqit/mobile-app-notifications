@@ -93,6 +93,7 @@ Future<void> scheduleAndroid() async {
     for (var i = 0; i < prayersList.length; i++) {
       var prayer = prayersList[i];
 
+      int index = await PrayersName().getPrayerIndex(prayer.prayerName ?? '');
       String minutesToAthan =
           await PrayersName().getStringText(prayer.notificationBeforeAthan);
       //Fetch App Language
@@ -103,7 +104,8 @@ Future<void> scheduleAndroid() async {
       var preNotificationTime = prayer.time!
           .subtract(Duration(minutes: prayer.notificationBeforeAthan));
 
-      if (prayer.notificationBeforeAthan != 0 &&
+      if (index != 1 &&
+          prayer.notificationBeforeAthan != 0 &&
           preNotificationTime.isAfter(DateTime.now())) {
         var id = (prayer.alarmId + 100000).toString();
         _newAlarmIds.add(id);
@@ -150,7 +152,6 @@ Future<void> scheduleAndroid() async {
       DateTime notificationTime;
       int notificationBeforeShuruq;
 
-      int index = await PrayersName().getPrayerIndex(prayer.prayerName ?? '');
       if (index == 1) {
         notificationBeforeShuruq =
             prefs.getInt('notificationBeforeShuruq') ?? 0;

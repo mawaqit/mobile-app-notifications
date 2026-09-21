@@ -69,7 +69,8 @@ Future<void> scheduleIOS() async {
             .subtract(Duration(minutes: prayer.notificationBeforeAthan));
 
         /// PRE NOTIFICATION
-        if (prayer.notificationBeforeAthan != 0 &&
+        if (index != 1 &&
+            prayer.notificationBeforeAthan != 0 &&
             preNotificationTime.isAfter(DateTime.now())) {
           String title =
               '${prayer.notificationBeforeAthan} $minutesToAthan $translatedPrayerName';
