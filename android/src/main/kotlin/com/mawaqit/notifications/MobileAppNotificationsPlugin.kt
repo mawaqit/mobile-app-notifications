@@ -81,14 +81,26 @@ class MobileAppNotificationsPlugin : FlutterPlugin, MethodChannel.MethodCallHand
                     putExtra(AdhanPlayerService.EXTRA_STOP_LABEL, call.argument<String>("stopLabel") ?: "Stop")
                     putExtra(AdhanPlayerService.EXTRA_DEFAULT_TITLE, call.argument<String>("defaultTitle") ?: "Adhan")
                 }
-                startService(context, intent)
+                if (previewMode) {
+                    try {
+                        context.startService(intent)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to start preview service", e)
+                    }
+                } else {
+                    startService(context, intent)
+                }
                 result.success(null)
             }
             "stopAdhan" -> {
                 val intent = Intent(context, AdhanPlayerService::class.java).apply {
                     action = AdhanPlayerService.ACTION_STOP
                 }
-                startService(context, intent)
+                try {
+                    context.startService(intent)
+                } catch (_: Exception) {
+                    context.stopService(intent)
+                }
                 result.success(null)
             }
             "setPreviewVolume" -> {
@@ -97,7 +109,11 @@ class MobileAppNotificationsPlugin : FlutterPlugin, MethodChannel.MethodCallHand
                     action = AdhanPlayerService.ACTION_SET_PREVIEW_VOLUME
                     putExtra(AdhanPlayerService.EXTRA_VOLUME, call.argument<Int>("adhanVolume") ?: 100)
                 }
-                startService(context, intent)
+                try {
+                    context.startService(intent)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to set preview volume", e)
+                }
                 result.success(null)
             }
             else -> result.notImplemented()
