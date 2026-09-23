@@ -222,7 +222,10 @@ class AdhanPlayerService : Service() {
     override fun onDestroy() {
         releaseMediaSession()
         unregisterVolumeReceiver()
+        mainHandler.removeCallbacksAndMessages(null)
         releasePlayer()
+        audioFocus.abandon()
+        cancelVibration()
         // Final safety net — guarantees the device volume is never left at the
         // adhan override level, and the wake lock never leaks, if the service is
         // torn down by any path that didn't already clean up.
