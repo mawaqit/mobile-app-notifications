@@ -13,6 +13,7 @@ import 'src/android_scheduler.dart' as android;
 import 'src/ios_scheduler.dart' as ios;
 import 'src/notification_plugin.dart' as plugin;
 import 'src/pre_notification.dart';
+import 'src/old_notification.dart';
 
 /// Public entry point for scheduling and managing prayer-time notifications.
 /// Implementation lives in [src] — this class is a thin delegating facade.
@@ -168,16 +169,27 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       try {
         await plugin.flutterLocalNotificationsPlugin.cancel(id + 100000);
       } catch (_) {}
-      await playAdhanNative(
-        sound: sound,
-        soundType: soundType,
-        title: notificationTitle,
-        body: mosque,
-        playInSilent: playInSilent,
-        customVolumeEnabled: customVolumeEnabled,
-        adhanVolume: adhanVolume,
-        muteWithVolumeKeys: muteWithVolumeKeys,
-      );
+      if (customVolumeEnabled) {
+        await playAdhanNative(
+          sound: sound,
+          soundType: soundType,
+          title: notificationTitle,
+          body: mosque,
+          playInSilent: playInSilent,
+          customVolumeEnabled: customVolumeEnabled,
+          adhanVolume: adhanVolume,
+          muteWithVolumeKeys: muteWithVolumeKeys,
+        );
+      } else {
+        await showOldNotification(
+          id: id,
+          prayer: prayer,
+          title: notificationTitle,
+          mosque: mosque,
+          sound: sound,
+          soundType: soundType,
+        );
+      }
     }
 
   } catch (e, t) {

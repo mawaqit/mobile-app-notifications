@@ -40,7 +40,7 @@ class MobileAppNotificationsPlugin : FlutterPlugin, MethodChannel.MethodCallHand
         // Runs once per device — idempotent via SharedPreferences flag.
         // Executes from both main and background engines so the migration
         // catches the "user upgrades but never opens the app" case.
-        migrateOrphanedAdhanChannels(binding.applicationContext)
+        // migrateOrphanedAdhanChannels(binding.applicationContext) // Kept for legacy 4.1.1 adhan channels
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
