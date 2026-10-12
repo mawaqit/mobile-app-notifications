@@ -153,8 +153,11 @@ Future<void> scheduleAndroid() async {
       int notificationBeforeShuruq;
 
       if (index == 1) {
-        notificationBeforeShuruq =
-            prefs.getInt('notificationBeforeShuruq') ?? 0;
+        // The lead time lives on the Shuruq record; the legacy prefs key wins
+        // while it exists (app builds that predate the move, or before the app
+        // has started once to migrate it).
+        notificationBeforeShuruq = prefs.getInt('notificationBeforeShuruq') ??
+            prayer.notificationBeforeAthan;
 
         notificationTime = prayer.time!
             .subtract(Duration(minutes: notificationBeforeShuruq));
