@@ -1,5 +1,7 @@
 package com.mawaqit.notifications
 
+import android.app.AlarmManager
+import android.app.ForegroundServiceStartNotAllowedException
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -79,6 +81,17 @@ class AdhanPlayerService : Service() {
 
         // Grace period (ms) on startup to ignore self-inflicted volume changes or initial broadcasts.
         private const val STARTUP_IGNORE_WINDOW_MS = 300L
+
+        // Set on the one-shot retry scheduled when startForeground() is refused,
+        // so a second refusal falls back to a visual notification instead of looping.
+        private const val EXTRA_FGS_RETRY = "fgsRetry"
+        private const val FGS_RETRY_REQUEST_CODE = 7734
+
+        // Android 15+ refuses a mediaPlayback FGS whose only background-start
+        // exemption is the BOOT_COMPLETED temp allowlist (20 s by default). An adhan
+        // alarm that android_alarm_manager_plus re-registers on boot fires inside that
+        // window. Retrying after it expires lets the exact alarm's own exemption apply.
+        private const val FGS_RETRY_DELAY_MS = 25_000L
     }
 
     private var mediaPlayer: MediaPlayer? = null
@@ -196,10 +209,14 @@ class AdhanPlayerService : Service() {
                 // transient, in-app, lifecycle-bound preview rather than a real
                 // adhan that must persist in the tray.
                 if (!previewMode) {
-                    startAsForeground(
+                    val started = startAsForeground(
                         title, body, channelName, channelDescription, stopLabel, defaultTitle,
                         includeStopAction = audible,
                     )
+                    if (!started) {
+                        handleForegroundRefused(intent, startId)
+                        return START_NOT_STICKY
+                    }
                 }
 
                 if (audible) {
@@ -757,6 +774,13 @@ class AdhanPlayerService : Service() {
             .build()
     }
 
+    /**
+     * Returns false when the system refuses the foreground start (Android 12+
+     * [ForegroundServiceStartNotAllowedException]), e.g. a mediaPlayback FGS
+     * started inside the BOOT_COMPLETED window on Android 15+. The system has
+     * already cleared the startForegroundService() obligation at that point, so
+     * no ForegroundServiceDidNotStartInTimeException follows.
+     */
     private fun startAsForeground(
         title: String,
         body: String,
@@ -765,7 +789,7 @@ class AdhanPlayerService : Service() {
         stopLabel: String,
         defaultTitle: String,
         includeStopAction: Boolean,
-    ) {
+    ): Boolean {
         ensureNotificationChannel(channelName, channelDescription)
 
         val notification = buildNotification(
@@ -777,14 +801,76 @@ class AdhanPlayerService : Service() {
             stopLabel = stopLabel,
         )
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(
-                NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
-            )
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+            return true
+        } catch (e: Exception) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                e is ForegroundServiceStartNotAllowedException
+            ) {
+                Log.w(TAG, "startForeground refused: ${e.message}")
+                return false
+            }
+            throw e
+        }
+    }
+
+    /**
+     * First refusal: retry the same play request once via an exact alarm after
+     * the boot allowlist has expired. Second refusal, or no exact-alarm access:
+     * post the adhan notification without audio so the prayer is still shown.
+     */
+    private fun handleForegroundRefused(intent: Intent?, startId: Int) {
+        val isRetry = intent?.getBooleanExtra(EXTRA_FGS_RETRY, false) ?: false
+        if (!isRetry && intent != null && scheduleForegroundRetry(intent)) {
+            Log.i(TAG, "Adhan playback retry scheduled in ${FGS_RETRY_DELAY_MS}ms")
         } else {
-            startForeground(NOTIFICATION_ID, notification)
+            Log.w(TAG, "Adhan playback not allowed — visual notification only")
+            val notification = buildNotification(
+                title = currentTitle,
+                body = currentBody,
+                defaultTitle = currentDefaultTitle,
+                isOngoing = false,
+                includeStopAction = false,
+            )
+            getSystemService(NotificationManager::class.java)?.notify(NOTIFICATION_ID, notification)
+        }
+        mainHandler.removeCallbacksAndMessages(null)
+        releaseWakeLock()
+        stopSelf(startId)
+    }
+
+    private fun scheduleForegroundRetry(intent: Intent): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return false
+        val alarmManager = getSystemService(AlarmManager::class.java) ?: return false
+        if (!alarmManager.canScheduleExactAlarms()) return false
+
+        val retryIntent = Intent(intent).apply {
+            setClass(this@AdhanPlayerService, AdhanPlayerService::class.java)
+            putExtra(EXTRA_FGS_RETRY, true)
+        }
+        val pendingIntent = PendingIntent.getForegroundService(
+            this, FGS_RETRY_REQUEST_CODE, retryIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        return try {
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                SystemClock.elapsedRealtime() + FGS_RETRY_DELAY_MS,
+                pendingIntent
+            )
+            true
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Could not schedule adhan playback retry", e)
+            false
         }
     }
 
