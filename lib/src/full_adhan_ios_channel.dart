@@ -33,7 +33,9 @@ import 'package:mawaqit_core_logger/mawaqit_core_logger.dart';
 /// ```
 ///
 /// Pre-notifications (the "X minutes before athan" reminders) are NOT routed
-/// through this channel — they continue to use the UN notification path.
+/// through this channel — they continue to use the UN notification path —
+/// except a Fajr adhan reminder with `preUseFullAdhanIOS`, which comes here
+/// with the pre-notification id (`alarmId + 100000`).
 class FullAdhanIOSChannel {
   FullAdhanIOSChannel._();
 

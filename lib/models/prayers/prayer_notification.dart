@@ -41,9 +41,19 @@ class PrayerNotification {
   /// iOS-only: when true, the main athan is handed off to a native AlarmKit
   /// implementation that plays the full adhan recording. When false, the
   /// standard UN notification path runs and iOS caps the sound at ~30s.
-  /// Pre-notifications stay on the UN path regardless.
+  /// Pre-notifications follow [preUseFullAdhanIOS] instead.
   final bool useFullAdhanIOS;
   final bool muteWithVolumeKeys;
+
+  /// Fajr-only: the sound of the "X minutes before athan" reminder, kept apart
+  /// from [notificationSound] (the main athan). 'DEFAULT' is the plain beep;
+  /// an adhan path plays that adhan, like the Shuruq reminder does.
+  final String preNotificationSound;
+  final SoundType preNotificationSoundType;
+
+  /// iOS-only, Fajr-only: when true, an adhan pre-notification is handed off
+  /// to the native AlarmKit path so the full recording plays.
+  final bool preUseFullAdhanIOS;
 
   static getDBPrayerKeyByPrayer(int? prayer) {
     switch (prayer) {
@@ -93,6 +103,9 @@ class PrayerNotification {
     this.adhanVolume = kMaxAdhanVolume,
         this.useFullAdhanIOS = false,
         this.muteWithVolumeKeys = false,
+    this.preNotificationSound = 'DEFAULT',
+    this.preNotificationSoundType = SoundType.none,
+    this.preUseFullAdhanIOS = false,
   });
 
   PrayerNotification.fromJson(Map<String, dynamic> json)
@@ -108,7 +121,12 @@ class PrayerNotification {
         customVolumeEnabled = json['customVolumeEnabled'] ?? false,
         adhanVolume = json['adhanVolume'] ?? kMaxAdhanVolume,
         useFullAdhanIOS = json['useFullAdhanIOS'] ?? false,
-        muteWithVolumeKeys = json['muteWithVolumeKeys'] ?? false;
+        muteWithVolumeKeys = json['muteWithVolumeKeys'] ?? false,
+        preNotificationSound = json['preNotificationSound'] ?? 'DEFAULT',
+        preNotificationSoundType = SoundType.values.firstWhere(
+            (e) => e.name == json['preNotificationSoundType'],
+            orElse: () => SoundType.none),
+        preUseFullAdhanIOS = json['preUseFullAdhanIOS'] ?? false;
 
   Map<String, dynamic> toJson() {
     return {
@@ -122,6 +140,9 @@ class PrayerNotification {
       'adhanVolume': adhanVolume,
       'useFullAdhanIOS': useFullAdhanIOS,
       'muteWithVolumeKeys': muteWithVolumeKeys,
+      'preNotificationSound': preNotificationSound,
+      'preNotificationSoundType': preNotificationSoundType.name,
+      'preUseFullAdhanIOS': preUseFullAdhanIOS,
     };
   }
 }

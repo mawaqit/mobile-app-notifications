@@ -71,6 +71,43 @@ Future<void> scheduleIOS() async {
         /// PRE NOTIFICATION
         if (index != 1 &&
             prayer.notificationBeforeAthan != 0 &&
+            preNotificationTime.isAfter(DateTime.now()) &&
+            prayer.hasPreAdhan) {
+          // Fajr adhan reminder: titled and played like the Shuruq one.
+          String minutes =
+              await PrayersName().getMinutesText(prayer.notificationBeforeAthan);
+          String title =
+              '$translatedPrayerName $inText ${prayer.notificationBeforeAthan} $minutes';
+          if (prayer.preUseFullAdhanIOS) {
+            fullAdhanPayloads.add({
+              'alarmId': prayer.alarmId + 100000,
+              'fireDateMillis': preNotificationTime.millisecondsSinceEpoch,
+              'prayerIndex': index,
+              'title': title,
+              'body': prayer.mosqueName,
+              'soundAssetId': prayer.preSound,
+              'soundType': prayer.preSoundType,
+            });
+            Log.i(
+                'Full adhan pre notification queued for native for ${prayer.prayerName} at: $preNotificationTime Id: ${prayer.alarmId + 100000}');
+          } else {
+            String? soundFile;
+            if (prayer.preSoundType == SoundType.systemSound.name) {
+              soundFile = await PrayerService().getDeviceSound(prayer.preSound);
+            }
+            await iosNotificationSchedular(
+              prayer.alarmId + 100000,
+              preNotificationTime,
+              title,
+              prayer.mosqueName,
+              soundFile ?? prayer.preSound,
+            );
+            Log.i(
+                'Adhan pre notification scheduled for ${prayer.prayerName} at: $preNotificationTime Id: ${prayer.alarmId + 100000}');
+            j++;
+          }
+        } else if (index != 1 &&
+            prayer.notificationBeforeAthan != 0 &&
             preNotificationTime.isAfter(DateTime.now())) {
           String title =
               '${prayer.notificationBeforeAthan} $minutesToAthan $translatedPrayerName';
