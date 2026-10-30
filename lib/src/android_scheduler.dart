@@ -118,14 +118,18 @@ Future<void> scheduleAndroid() async {
               wakeup: true,
               rescheduleOnReboot: true,
               params: {
-                'sound': 'mawaqit_id',
+                // Fajr can play an adhan before the athan, like Shuruq does;
+                // otherwise the reminder keeps its default beep.
+                'sound': prayer.hasPreAdhan ? prayer.preSound : 'mawaqit_id',
                 'mosque': prayer.mosqueName,
                 'prayer': prayer.prayerName,
                 'time': prayer.notificationBeforeAthan.toString(),
                 'isPreNotification': true,
+                'preAdhan': prayer.hasPreAdhan,
                 'minutesToAthan': minutesToAthan,
                 'notificationBeforeShuruq': 0,
-                'sound_type': prayer.soundType,
+                'sound_type':
+                    prayer.hasPreAdhan ? prayer.preSoundType : prayer.soundType,
                 'appLanguage': appLanguage,
                 'is24HourFormat': is24HourFormat,
                 'scheduledAtMillis':

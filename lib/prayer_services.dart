@@ -70,7 +70,13 @@ class PrayerService {
               customVolumeEnabled: obj.customVolumeEnabled,
               adhanVolume: obj.adhanVolume,
               useFullAdhanIOS: obj.useFullAdhanIOS,
-              muteWithVolumeKeys: obj.muteWithVolumeKeys
+              muteWithVolumeKeys: obj.muteWithVolumeKeys,
+              // The adhan pre-notification is a Fajr-only option; every other
+              // prayer keeps the default beep whatever its record holds.
+              preSound: index == 0 ? obj.preNotificationSound : 'DEFAULT',
+              preSoundType:
+                  index == 0 ? obj.preNotificationSoundType.name : 'none',
+              preUseFullAdhanIOS: index == 0 && obj.preUseFullAdhanIOS,
               );
 
           prayersList.add(prayer);
