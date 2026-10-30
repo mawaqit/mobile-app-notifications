@@ -1,3 +1,5 @@
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:intl/intl.dart';
@@ -33,6 +35,23 @@ Future<bool> checkIOSNotificationPermissions() async {
   }
 }
 
+/// Whether this device can play the full adhan through AlarmKit (iOS 26+).
+Future<bool> supportsFullAdhanIOS() async {
+  try {
+    final iosInfo = await DeviceInfoPlugin().iosInfo;
+    return isFullAdhanSupportedVersion(iosInfo.systemVersion);
+  } catch (e, s) {
+    Log.e('Could not read iOS version; full adhan disabled', error: e, stackTrace: s);
+    return false;
+  }
+}
+
+@visibleForTesting
+bool isFullAdhanSupportedVersion(String systemVersion) {
+  final major = int.tryParse(systemVersion.split('.').first.trim()) ?? 0;
+  return major >= 26;
+}
+
 Future<void> scheduleIOS() async {
   try {
     // Clear all scheduled notifications (UN path + native AlarmKit path)
@@ -48,6 +67,9 @@ Future<void> scheduleIOS() async {
     // Payloads for prayers that should be played by the native AlarmKit-based
     // implementation instead of the UN notification path (full adhan).
     final List<Map<String, dynamic>> fullAdhanPayloads = [];
+    // Below iOS 26 the native side rejects AlarmKit alarms, so a full-adhan
+    // prayer would get no notification at all; keep it on the UN path instead.
+    final bool fullAdhanSupported = await supportsFullAdhanIOS();
 
     if (prayersList.isEmpty) {
       return; // Exit early if there are no prayers
@@ -78,7 +100,7 @@ Future<void> scheduleIOS() async {
               await PrayersName().getMinutesText(prayer.notificationBeforeAthan);
           String title =
               '$translatedPrayerName $inText ${prayer.notificationBeforeAthan} $minutes';
-          if (prayer.preUseFullAdhanIOS) {
+          if (prayer.preUseFullAdhanIOS && fullAdhanSupported) {
             fullAdhanPayloads.add({
               'alarmId': prayer.alarmId + 100000,
               'fireDateMillis': preNotificationTime.millisecondsSinceEpoch,
@@ -159,7 +181,7 @@ Future<void> scheduleIOS() async {
             notificationTime.isAfter(DateTime.now())) {
           // Hand off to native AlarmKit path when enabled — the UN sound is
           // capped at ~30s, so the full adhan can't play through it.
-          if (prayer.useFullAdhanIOS) {
+          if (prayer.useFullAdhanIOS && fullAdhanSupported) {
             fullAdhanPayloads.add({
               'alarmId': prayer.alarmId,
               'fireDateMillis': notificationTime.millisecondsSinceEpoch,
