@@ -135,6 +135,7 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       orElse: () => SoundType.customSound,
     );
     bool isPreNotification = (data['isPreNotification'] as bool?) ?? false;
+    bool preAdhan = (data['preAdhan'] as bool?) ?? false;
     String minutesToAthan = (data['minutesToAthan'] as String?) ?? '';
     int notificationBeforeShuruq =
         (data['notificationBeforeShuruq'] as int?) ?? 0;
@@ -146,7 +147,13 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
     bool muteWithVolumeKeys = data['muteWithVolumeKeys'] ?? false;
 
     String notificationTitle;
-    if (isPreNotification) {
+    if (isPreNotification && preAdhan) {
+      // Reads like the Shuruq reminder: "Fajr in 15 minutes".
+      int minutesBefore = int.tryParse(time) ?? 0;
+      String inText = await PrayersName().getInText();
+      String minutes = await PrayersName().getMinutesText(minutesBefore);
+      notificationTitle = '$prayer $inText $minutesBefore $minutes';
+    } else if (isPreNotification) {
       notificationTitle = '$time $minutesToAthan $prayer';
     } else if (notificationBeforeShuruq != 0) {
       String inText = await PrayersName().getInText();
@@ -161,7 +168,18 @@ void ringAlarm(int id, Map<String, dynamic> data) async {
       notificationTitle = '$prayer  $formattedTime';
     }
 
-    if (isPreNotification) {
+    if (isPreNotification && preAdhan) {
+      // Same legacy path as the Shuruq adhan: no custom volume for reminders.
+      // Keeps the pre-notification id, so the athan still clears it.
+      await showOldNotification(
+        id: id,
+        prayer: prayer,
+        title: notificationTitle,
+        mosque: mosque,
+        sound: sound,
+        soundType: soundType,
+      );
+    } else if (isPreNotification) {
       await showPreNotification(id, prayer, notificationTitle, mosque);
     } else {
       // Fix A: clear the matching pre-notification (if still in the tray) before

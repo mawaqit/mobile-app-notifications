@@ -8,6 +8,9 @@ class NotificationInfoModel {
   int adhanVolume;
   bool useFullAdhanIOS;
   bool muteWithVolumeKeys;
+  String preSound;
+  String preSoundType;
+  bool preUseFullAdhanIOS;
   NotificationInfoModel({
     required this.mosqueName,
     required this.sound,
@@ -21,5 +24,12 @@ class NotificationInfoModel {
     this.adhanVolume = 100,
     this.useFullAdhanIOS = false,
     this.muteWithVolumeKeys = false,
+    this.preSound = 'DEFAULT',
+    this.preSoundType = 'none',
+    this.preUseFullAdhanIOS = false,
   });
+
+  /// Whether the pre-notification plays an adhan instead of the default beep.
+  bool get hasPreAdhan =>
+      preSound.isNotEmpty && preSound != 'DEFAULT' && preSound != 'SILENT';
 }
