@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:intl/intl.dart';
 import 'package:mawaqit_core_logger/mawaqit_core_logger.dart';
+import 'package:mobile_app_notifications/models/alarm_authorization_state.dart';
 import 'package:mobile_app_notifications/models/prayers/prayer_name.dart';
 import 'package:mobile_app_notifications/models/prayers/prayer_notification.dart';
 import 'package:mobile_app_notifications/models/prayers/prayer_time_format.dart';
@@ -46,6 +47,26 @@ Future<bool> supportsFullAdhanIOS() async {
   }
 }
 
+/// The iOS Alarms permission that "Play full Adhan" needs. [unsupported] below
+/// iOS 26, where AlarmKit doesn't exist.
+Future<AlarmAuthorizationState> getAlarmAuthorizationState() async {
+  if (!await supportsFullAdhanIOS()) return AlarmAuthorizationState.unsupported;
+  return FullAdhanIOSChannel.getAuthorizationState();
+}
+
+/// Shows the iOS Alarms prompt if the user hasn't answered it yet, and returns
+/// the resulting state. Once answered, iOS won't ask again; the user has to
+/// change it in the iPhone Settings.
+Future<AlarmAuthorizationState> requestAlarmAuthorization() async {
+  if (!await supportsFullAdhanIOS()) return AlarmAuthorizationState.unsupported;
+  return FullAdhanIOSChannel.requestAuthorization();
+}
+
+/// Whether a full-adhan prayer can go to AlarmKit. Otherwise it is scheduled
+/// as a normal notification (the ~30 s clip) so it never goes silent.
+@visibleForTesting
+bool canScheduleFullAdhan(AlarmAuthorizationState state) => state.isAuthorized;
+
 @visibleForTesting
 bool isFullAdhanSupportedVersion(String systemVersion) {
   final major = int.tryParse(systemVersion.split('.').first.trim()) ?? 0;
@@ -67,9 +88,12 @@ Future<void> scheduleIOS() async {
     // Payloads for prayers that should be played by the native AlarmKit-based
     // implementation instead of the UN notification path (full adhan).
     final List<Map<String, dynamic>> fullAdhanPayloads = [];
-    // Below iOS 26 the native side rejects AlarmKit alarms, so a full-adhan
-    // prayer would get no notification at all; keep it on the UN path instead.
-    final bool fullAdhanSupported = await supportsFullAdhanIOS();
+    // Below iOS 26, or without the Alarms permission, the native side rejects
+    // AlarmKit alarms, so a full-adhan prayer would get no notification at
+    // all; keep it on the UN path instead.
+    final alarmAuthorization = await getAlarmAuthorizationState();
+    final bool fullAdhanSupported = canScheduleFullAdhan(alarmAuthorization);
+    Log.i('Full adhan alarm authorization: ${alarmAuthorization.name}');
 
     if (prayersList.isEmpty) {
       return; // Exit early if there are no prayers
