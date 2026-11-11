@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:mawaqit_core_logger/mawaqit_core_logger.dart';
 
+import 'models/alarm_authorization_state.dart';
 import 'models/prayers/prayer_name.dart';
 import 'models/prayers/prayer_notification.dart';
 import 'models/prayers/prayer_time_format.dart';
@@ -14,6 +15,8 @@ import 'src/ios_scheduler.dart' as ios;
 import 'src/notification_plugin.dart' as plugin;
 import 'src/pre_notification.dart';
 import 'src/old_notification.dart';
+
+export 'models/alarm_authorization_state.dart';
 
 /// Public entry point for scheduling and managing prayer-time notifications.
 /// Implementation lives in [src] — this class is a thin delegating facade.
@@ -30,6 +33,19 @@ class ScheduleAdhan {
       ios.checkIOSNotificationPermissions();
 
   Future<void> scheduleAndroid() => android.scheduleAndroid();
+
+  /// iOS 26+ Alarms permission used by "Play full Adhan";
+  /// [AlarmAuthorizationState.unsupported] elsewhere.
+  Future<AlarmAuthorizationState> getAlarmAuthorizationState() =>
+      Platform.isIOS
+          ? ios.getAlarmAuthorizationState()
+          : Future.value(AlarmAuthorizationState.unsupported);
+
+  /// Asks for the iOS Alarms permission if it hasn't been answered yet.
+  Future<AlarmAuthorizationState> requestAlarmAuthorization() =>
+      Platform.isIOS
+          ? ios.requestAlarmAuthorization()
+          : Future.value(AlarmAuthorizationState.unsupported);
 
   Future<void> schedule() async {
     if (Platform.isAndroid) {

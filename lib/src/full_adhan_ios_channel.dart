@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:mawaqit_core_logger/mawaqit_core_logger.dart';
+import 'package:mobile_app_notifications/models/alarm_authorization_state.dart';
 
 /// MethodChannel bridge for handing the main iOS athan off to a native
 /// AlarmKit-based implementation that plays the full adhan recording.
@@ -18,6 +19,11 @@ import 'package:mawaqit_core_logger/mawaqit_core_logger.dart';
 ///   `flutterLocalNotificationsPlugin.cancelAll()`.
 /// * `scheduleFullAdhan` — args: `{ "prayers": [<payload>, ...] }`. Schedule
 ///   the listed prayers. See [_FullAdhanPayload] for the per-prayer shape.
+///   Never asks for the Alarms permission; it fails when it isn't granted.
+/// * `getAlarmAuthorizationState` — no args; returns the AlarmKit permission
+///   as a [AlarmAuthorizationState] name.
+/// * `requestAlarmAuthorization` — no args; shows the iOS Alarms prompt if it
+///   hasn't been answered yet and returns the resulting state name.
 ///
 /// **Per-prayer payload (`Map<String, dynamic>`):**
 /// ```
@@ -42,6 +48,8 @@ class FullAdhanIOSChannel {
   static const String channelName = 'mobile_app_notifications/full_adhan_ios';
   static const String _scheduleMethod = 'scheduleFullAdhan';
   static const String _cancelMethod = 'cancelAllFullAdhan';
+  static const String _authorizationStateMethod = 'getAlarmAuthorizationState';
+  static const String _requestAuthorizationMethod = 'requestAlarmAuthorization';
 
   static const MethodChannel _channel = MethodChannel(channelName);
 
@@ -49,8 +57,7 @@ class FullAdhanIOSChannel {
     try {
       await _channel.invokeMethod(_cancelMethod);
     } catch (e, t) {
-      Log.e('FullAdhanIOSChannel.cancelAll failed',
-          error: e, stackTrace: t);
+      Log.e('FullAdhanIOSChannel.cancelAll failed', error: e, stackTrace: t);
     }
   }
 
@@ -59,8 +66,24 @@ class FullAdhanIOSChannel {
     try {
       await _channel.invokeMethod(_scheduleMethod, {'prayers': prayers});
     } catch (e, t) {
-      Log.e('FullAdhanIOSChannel.schedule failed',
-          error: e, stackTrace: t);
+      Log.e('FullAdhanIOSChannel.schedule failed', error: e, stackTrace: t);
+    }
+  }
+
+  static Future<AlarmAuthorizationState> getAuthorizationState() =>
+      _invokeAuthorization(_authorizationStateMethod);
+
+  static Future<AlarmAuthorizationState> requestAuthorization() =>
+      _invokeAuthorization(_requestAuthorizationMethod);
+
+  static Future<AlarmAuthorizationState> _invokeAuthorization(
+      String method) async {
+    try {
+      return AlarmAuthorizationState.fromName(
+          await _channel.invokeMethod<String>(method));
+    } catch (e, t) {
+      Log.e('FullAdhanIOSChannel.$method failed', error: e, stackTrace: t);
+      return AlarmAuthorizationState.unsupported;
     }
   }
 }
