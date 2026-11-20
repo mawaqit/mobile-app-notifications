@@ -21,13 +21,18 @@ class PrayerService {
     'IMSAK_NOTIFICATION',
   ];
 
+  /// How many days ahead [getPrayers] looks for prayer times at most. Enough
+  /// to fill iOS's 70 slots with a single prayer enabled, and a hard stop when
+  /// the stored data has no usable times.
+  static const _maxDaysAhead = 366;
+
   Future<List<NotificationInfoModel>> getPrayers() async {
     List<NotificationInfoModel> prayersList = [];
     var scheduledCount = 0;
     for (var key in prayerKeys) {
       var obj =
           await PrayerNotificationService().getPrayerNotificationFromDB(key);
-      if (_check(obj)) {
+      if (_check(obj) && await _hasStoredMosque(obj)) {
         scheduledCount++;
       }
     }
@@ -37,13 +42,19 @@ class PrayerService {
     }
 
     int i = -1;
-    while (prayersList.length < (Platform.isIOS ? 70 : 10)) {
+    while (prayersList.length < (Platform.isIOS ? 70 : 10) &&
+        i < _maxDaysAhead) {
       i++;
       for (var key in prayerKeys) {
         var obj =
             await PrayerNotificationService().getPrayerNotificationFromDB(key);
         var index = prayerKeys.indexOf(key);
         if (_check(obj)) {
+          // The mosque can be gone while its notification settings stay
+          // behind (mawaqit/mobile-app#3358); it has no times to schedule.
+          if (!await _hasStoredMosque(obj)) {
+            continue;
+          }
           final mosque = await _getMosque(obj.mosqueUuid ?? '');
 
           var time = _getPrayerTime(mosque, key,
@@ -91,7 +102,8 @@ class PrayerService {
           .toString()
           .compareTo(b.time!.millisecondsSinceEpoch.toString()),
     );
-    prayersList = prayersList.sublist(0, Platform.isIOS ? 63 : 5);
+    // The day limit above can leave fewer prayers than this.
+    prayersList = prayersList.take(Platform.isIOS ? 63 : 5).toList();
     return prayersList;
   }
 
@@ -195,6 +207,9 @@ class PrayerService {
 
     return mosque;
   }
+
+  Future<bool> _hasStoredMosque(PrayerNotification obj) async =>
+      (await SharedPreferences.getInstance()).containsKey(obj.mosqueUuid ?? '');
 
   Future<String?> getDeviceSound(String path) async {
     try {
